@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node.js Axios HTTP Connection Reuse Guide - axios</title>
+    <meta name="description" content="This article examines how HTTP connection reuse (HTTP Keep-Alive) impacts the performance of the Axios client within Node.js applications. By default, Node.js destroys TCP sockets after each request unless explicitly configured otherwise. Enabling persis">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/node-js-axios-http-connection-reuse-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Node.js Axios HTTP Connection Reuse Guide - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/node-js-axios-http-connection-reuse-guide" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines how HTTP connection reuse (HTTP Keep-Alive) impacts the performance of the Axios client within Node.js applications. By default, Node.js destroys TCP sockets after each request unless explicitly configured otherwise. Enabling persis" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="nodejs-axios-http-connection-reuse-guide">Node.js Axios HTTP
+Connection Reuse Guide</h1>
+<p>This article examines how HTTP connection reuse (HTTP Keep-Alive)
+impacts the performance of the Axios client within Node.js applications.
+By default, Node.js destroys TCP sockets after each request unless
+explicitly configured otherwise. Enabling persistent connections
+dramatically improves application latency, reduces CPU overhead,
+prevents socket exhaustion under heavy load, and increases overall
+network throughput.</p>
+<h2 id="the-default-connection-behavior-in-nodejs">The Default
+Connection Behavior in Node.js</h2>
+<p>When Axios runs in a Node.js environment, it utilizes the native
+<code>http</code> and <code>https</code> modules to dispatch network
+requests. By default, the global Node.js HTTP/HTTPS agents do not reuse
+connections between individual requests; they terminate the underlying
+TCP socket once a response finishes.</p>
+<p>Each subsequent HTTP request requires a new TCP three-way handshake.
+For HTTPS traffic, this also requires a full TLS handshake, which
+involves multiple network round-trips and cryptographic operations
+before any application data is sent.</p>
+<h2 id="key-impacts-of-http-connection-reuse">Key Impacts of HTTP
+Connection Reuse</h2>
+<h3 id="1-significant-latency-reduction">1. Significant Latency
+Reduction</h3>
+<p>Reusing existing connections eliminates the round-trip times (RTT)
+required for TCP and TLS handshakes. For remote APIs or microservices,
+handshake overhead can easily add 50ms to 200ms per request. With
+Keep-Alive enabled, subsequent requests send HTTP payloads immediately
+over an established socket, cutting overall response times down to the
+bare network transit and processing time.</p>
+<h3 id="2-lower-cpu-and-memory-consumption">2. Lower CPU and Memory
+Consumption</h3>
+<p>The TLS handshake is computationally expensive because it involves
+asymmetric cryptography. When connections are reused across dozens or
+hundreds of requests, the CPU overhead on both the client application
+and the target server drops significantly, freeing up server resources
+for request processing.</p>
+<h3 id="3-prevention-of-socket-exhaustion-time_wait-state">3. Prevention
+of Socket Exhaustion (TIME_WAIT State)</h3>
+<p>When a client closes a TCP connection, the socket lingers in a
+<code>TIME_WAIT</code> state for a defined operating system duration
+(typically 60 to 120 seconds) to ensure delayed packets are handled
+correctly. Under high request volumes, opening and closing thousands of
+connections rapidly depletes the pool of available ephemeral ports,
+leading to <code>EADDRNOTAVAIL</code> or <code>ECONNRESET</code> errors.
+Connection reuse maintains a steady pool of active sockets, preventing
+port starvation.</p>
+<h3 id="4-increased-application-throughput">4. Increased Application
+Throughput</h3>
+<p>Because network sockets stay open and ready for immediate I/O, the
+Node.js event loop spends less time managing low-level connection
+lifecycles. This allows the application to handle a higher volume of
+concurrent outgoing requests.</p>
+<h2 id="how-to-configure-connection-reuse-in-axios">How to Configure
+Connection Reuse in Axios</h2>
+<p>To enable connection reuse in Axios, you must instantiate custom
+<code>http.Agent</code> and <code>https.Agent</code> instances with
+<code>keepAlive: true</code> and attach them to an Axios instance.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> http <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;http&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> https <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;https&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpAgent <span class="op">=</span> <span class="kw">new</span> http<span class="op">.</span><span class="fu">Agent</span>({</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">keepAlive</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxSockets</span><span class="op">:</span> <span class="dv">100</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxFreeSockets</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">60000</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpsAgent <span class="op">=</span> <span class="kw">new</span> https<span class="op">.</span><span class="fu">Agent</span>({</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">keepAlive</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxSockets</span><span class="op">:</span> <span class="dv">100</span><span class="op">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxFreeSockets</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">60000</span><span class="op">,</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com&#39;</span><span class="op">,</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  httpAgent<span class="op">,</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  httpsAgent<span class="op">,</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">5000</span><span class="op">,</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>module<span class="op">.</span><span class="at">exports</span> <span class="op">=</span> apiClient<span class="op">;</span></span></code></pre></div>
+<h3 id="agent-configuration-options">Agent Configuration Options:</h3>
+<ul>
+<li><strong><code>keepAlive</code></strong>: Set to <code>true</code> to
+keep sockets open for future requests.</li>
+<li><strong><code>maxSockets</code></strong>: Defines the maximum number
+of concurrent sockets allowed per host.</li>
+<li><strong><code>maxFreeSockets</code></strong>: The maximum number of
+idle sockets left open in the pool.</li>
+<li><strong><code>timeout</code></strong>: Sets the socket inactive
+timeout in milliseconds before destroying an idle connection.</li>
+</ul>
+<h2 id="common-considerations">Common Considerations</h2>
+<ul>
+<li><strong>Server-Side Keep-Alive Timeouts</strong>: Servers often
+enforce their own idle socket timeouts (e.g., NGINX defaults to 75
+seconds, AWS ALB defaults to 60 seconds). Ensure your client agent's
+idle timeout or request retry mechanisms account for server-initiated
+socket closures to avoid race conditions and <code>ECONNRESET</code>
+errors.</li>
+<li><strong>Load Balancers and DNS</strong>: Persistent TCP connections
+bypass DNS lookups on a per-request basis. If your destination relies on
+dynamic DNS updates or round-robin DNS for load balancing, long-lived
+sockets may send all traffic to a single backend instance unless the
+connection is periodically recycled.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

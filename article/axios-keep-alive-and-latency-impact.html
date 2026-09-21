@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Keep-Alive and Latency Impact - axios</title>
+    <meta name="description" content="HTTP keep-alive connection reuse dramatically reduces network latency in the Axios HTTP client by maintaining persistent TCP and TLS connections across multiple requests to the same origin. Without keep-alive enabled, every individual HTTP request incurs">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-keep-alive-and-latency-impact">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Keep-Alive and Latency Impact - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-keep-alive-and-latency-impact" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="HTTP keep-alive connection reuse dramatically reduces network latency in the Axios HTTP client by maintaining persistent TCP and TLS connections across multiple requests to the same origin. Without keep-alive enabled, every individual HTTP request incurs" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-keep-alive-and-latency-impact">Axios Keep-Alive and
+Latency Impact</h1>
+<p>HTTP keep-alive connection reuse dramatically reduces network latency
+in the Axios HTTP client by maintaining persistent TCP and TLS
+connections across multiple requests to the same origin. Without
+keep-alive enabled, every individual HTTP request incurs the overhead of
+opening a new connection, which includes DNS resolution, TCP three-way
+handshakes, and TLS negotiations. Enabling keep-alive in Axios avoids
+this repetitive handshake cycle, leading to faster response times, lower
+CPU overhead, and higher overall throughput for network operations.</p>
+<h3 id="the-connection-overhead-problem">The Connection Overhead
+Problem</h3>
+<p>When Axios initiates an HTTP request without connection reuse, it
+creates a new TCP socket for each call. For secure requests (HTTPS),
+establishing this connection requires multiple sequential
+round-trips:</p>
+<ol type="1">
+<li><strong>TCP Handshake:</strong> 1 Round-Trip Time (RTT) to complete
+the SYN, SYN-ACK, and ACK exchange.</li>
+<li><strong>TLS Handshake:</strong> 1 to 2 RTTs (depending on TLS 1.2 or
+TLS 1.3) to negotiate cipher suites and exchange cryptographic
+keys.</li>
+</ol>
+<p>In distributed microservices or cloud environments where network
+round-trip latency to external APIs ranges from 20ms to over 100ms,
+establishing a new connection adds 40ms to 300ms of latency
+<em>before</em> the server processes the request payload. Under high
+request volumes, this constant teardown and recreation also creates
+socket exhaustion by leaving thousands of ports in a
+<code>TIME_WAIT</code> state.</p>
+<h3 id="how-keep-alive-reduces-latency">How Keep-Alive Reduces
+Latency</h3>
+<p>HTTP Keep-Alive allows a single TCP connection to remain open after a
+response is received, enabling subsequent HTTP requests to reuse the
+established socket.</p>
+<p>By eliminating connection setup phases on subsequent requests, the
+latency of each request is reduced purely to the transmission time of
+the HTTP payload and the server processing time. In practice, this often
+cuts p95 and p99 response times by 50% to 80% for high-frequency or
+chained API calls. Reusing existing connections also reduces CPU
+utilization on both the client and server by skipping repeated
+cryptographic handshakes.</p>
+<h3 id="axios-behavior-nodejs-vs-browser">Axios Behavior: Node.js vs.
+Browser</h3>
+<p>The impact and configuration of keep-alive in Axios depend heavily on
+the runtime environment:</p>
+<ul>
+<li><strong>Browser Environment:</strong> The browser’s underlying
+network engine automatically manages connection pooling and keep-alive
+headers. Developers do not need to manually configure keep-alive in
+client-side Axios instances.</li>
+<li><strong>Node.js Environment:</strong> Axios utilizes Node.js native
+<code>http</code> and <code>https</code> modules. By default, standard
+Node.js agents destroy sockets immediately after a request finishes
+unless explicitly configured with persistent agents.</li>
+</ul>
+<h3 id="configuring-keep-alive-in-nodejs-axios">Configuring Keep-Alive
+in Node.js Axios</h3>
+<p>To achieve connection reuse in server-side Node.js environments, you
+must provide custom <code>http.Agent</code> and <code>https.Agent</code>
+instances with <code>keepAlive</code> set to <code>true</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> http <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;http&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> https <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;https&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpAgent <span class="op">=</span> <span class="kw">new</span> http<span class="op">.</span><span class="fu">Agent</span>({</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">keepAlive</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxSockets</span><span class="op">:</span> <span class="dv">100</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxFreeSockets</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">60000</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpsAgent <span class="op">=</span> <span class="kw">new</span> https<span class="op">.</span><span class="fu">Agent</span>({</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">keepAlive</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxSockets</span><span class="op">:</span> <span class="dv">100</span><span class="op">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxFreeSockets</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">60000</span><span class="op">,</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  httpAgent<span class="op">,</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  httpsAgent<span class="op">,</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="best-practices-and-considerations">Best Practices and
+Considerations</h3>
+<ul>
+<li><strong>Idle Socket Timeouts:</strong> Set the client-side
+keep-alive timeout slightly lower than the remote server’s keep-alive
+timeout. This prevents race conditions where the client attempts to
+reuse a socket just as the server closes it.</li>
+<li><strong>Socket Limits (<code>maxSockets</code>):</strong> Adjust
+<code>maxSockets</code> based on workload concurrency. Setting this
+value too low creates a client-side queue, increasing latency while
+waiting for an available socket.</li>
+<li><strong>Load Balancer Interaction:</strong> When routing through
+Layer 4 (TCP) load balancers, persistent connections can pin traffic to
+a single backend node. Layer 7 (HTTP/HTTPS) reverse proxies (such as
+NGINX or AWS ALB) handle keep-alive reuse on the frontend while
+distributing backend requests evenly.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

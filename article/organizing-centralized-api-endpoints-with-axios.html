@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organizing Centralized API Endpoints with Axios - axios</title>
+    <meta name="description" content="Centralizing API endpoints when using Axios is essential for building scalable, maintainable, and robust web applications. This article explores the most effective architectural patterns for organizing Axios requests, ranging from base client instances t">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/organizing-centralized-api-endpoints-with-axios">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Organizing Centralized API Endpoints with Axios - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/organizing-centralized-api-endpoints-with-axios" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Centralizing API endpoints when using Axios is essential for building scalable, maintainable, and robust web applications. This article explores the most effective architectural patterns for organizing Axios requests, ranging from base client instances t" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="organizing-centralized-api-endpoints-with-axios">Organizing
+Centralized API Endpoints with Axios</h1>
+<p>Centralizing API endpoints when using Axios is essential for building
+scalable, maintainable, and robust web applications. This article
+explores the most effective architectural patterns for organizing Axios
+requests, ranging from base client instances to domain-specific services
+and repository patterns. Implementing these strategies simplifies error
+handling, authentication token management, and URL updates across your
+entire codebase.</p>
+<hr />
+<h2 id="1-the-base-axios-instance-pattern">1. The Base Axios Instance
+Pattern</h2>
+<p>The foundation of any centralized API architecture is a
+pre-configured Axios instance. Instead of importing the raw
+<code>axios</code> package in multiple files, you create a shared
+instance with default configurations like base URLs, timeouts, and
+headers.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// src/api/client.js</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="bu">process</span><span class="op">.</span><span class="at">env</span><span class="op">.</span><span class="at">API_BASE_URL</span> <span class="op">||</span> <span class="st">&#39;https://api.example.com/v1&#39;</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">10000</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;application/json&#39;</span><span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Centralized request interceptor (e.g., attaching auth tokens)</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>apiClient<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">request</span><span class="op">.</span><span class="fu">use</span>((config) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> token <span class="op">=</span> localStorage<span class="op">.</span><span class="fu">getItem</span>(<span class="st">&#39;token&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (token) {</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    config<span class="op">.</span><span class="at">headers</span><span class="op">.</span><span class="at">Authorization</span> <span class="op">=</span> <span class="vs">`Bearer </span><span class="sc">${</span>token<span class="sc">}</span><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> config<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co">// Centralized response interceptor (e.g., global error handling)</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>apiClient<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="fu">use</span>(</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  (response) <span class="kw">=&gt;</span> response<span class="op">.</span><span class="at">data</span><span class="op">,</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  (error) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Handle 401 Unauthorized, logging, etc.</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">Promise</span><span class="op">.</span><span class="fu">reject</span>(error)<span class="op">;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="im">default</span> apiClient<span class="op">;</span></span></code></pre></div>
+<hr />
+<h2 id="2-the-module--service-based-pattern">2. The Module /
+Service-Based Pattern</h2>
+<p>The service-based pattern groups related API calls by feature or
+domain (e.g., <code>auth</code>, <code>users</code>,
+<code>products</code>). Each module exports specific functions that
+encapsulate endpoint paths, query parameters, and payload
+formatting.</p>
+<pre><code>src/api/
+├── client.js
+├── authService.js
+├── userService.js
+└── index.js</code></pre>
+<h3 id="implementation-example">Implementation Example:</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// src/api/userService.js</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> apiClient <span class="im">from</span> <span class="st">&#39;./client&#39;</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> userService <span class="op">=</span> {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">getAll</span><span class="op">:</span> (params) <span class="kw">=&gt;</span> apiClient<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/users&#39;</span><span class="op">,</span> { params })<span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">getById</span><span class="op">:</span> (id) <span class="kw">=&gt;</span> apiClient<span class="op">.</span><span class="fu">get</span>(<span class="vs">`/users/</span><span class="sc">${</span>id<span class="sc">}</span><span class="vs">`</span>)<span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">create</span><span class="op">:</span> (data) <span class="kw">=&gt;</span> apiClient<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;/users&#39;</span><span class="op">,</span> data)<span class="op">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">update</span><span class="op">:</span> (id<span class="op">,</span> data) <span class="kw">=&gt;</span> apiClient<span class="op">.</span><span class="fu">put</span>(<span class="vs">`/users/</span><span class="sc">${</span>id<span class="sc">}</span><span class="vs">`</span><span class="op">,</span> data)<span class="op">,</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">delete</span><span class="op">:</span> (id) <span class="kw">=&gt;</span> apiClient<span class="op">.</span><span class="fu">delete</span>(<span class="vs">`/users/</span><span class="sc">${</span>id<span class="sc">}</span><span class="vs">`</span>)<span class="op">,</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// src/api/index.js</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> { userService } <span class="im">from</span> <span class="st">&#39;./userService&#39;</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> { authService } <span class="im">from</span> <span class="st">&#39;./authService&#39;</span><span class="op">;</span></span></code></pre></div>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Clear separation of concerns.</li>
+<li>Easy to mock during unit testing.</li>
+<li>Component code remains clean without hardcoded URLs.</li>
+</ul>
+<hr />
+<h2 id="3-the-generic-repository-pattern">3. The Generic Repository
+Pattern</h2>
+<p>For applications interacting with standardized RESTful APIs, the
+Repository Pattern abstracts common CRUD operations into a reusable base
+class. Specific resources extend this base class to inherit standard
+operations and add custom endpoints.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// src/api/BaseRepository.js</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> apiClient <span class="im">from</span> <span class="st">&#39;./client&#39;</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">class</span> BaseRepository {</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">constructor</span>(resource) {</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">.</span><span class="at">resource</span> <span class="op">=</span> resource<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getAll</span>(params) {</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> apiClient<span class="op">.</span><span class="fu">get</span>(<span class="vs">`/</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">resource</span><span class="sc">}</span><span class="vs">`</span><span class="op">,</span> { params })<span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">get</span>(id) {</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> apiClient<span class="op">.</span><span class="fu">get</span>(<span class="vs">`/</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">resource</span><span class="sc">}</span><span class="vs">/</span><span class="sc">${</span>id<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">create</span>(data) {</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> apiClient<span class="op">.</span><span class="fu">post</span>(<span class="vs">`/</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">resource</span><span class="sc">}</span><span class="vs">`</span><span class="op">,</span> data)<span class="op">;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">update</span>(id<span class="op">,</span> data) {</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> apiClient<span class="op">.</span><span class="fu">put</span>(<span class="vs">`/</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">resource</span><span class="sc">}</span><span class="vs">/</span><span class="sc">${</span>id<span class="sc">}</span><span class="vs">`</span><span class="op">,</span> data)<span class="op">;</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>  <span class="kw">delete</span>(id) {</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> apiClient<span class="op">.</span><span class="fu">delete</span>(<span class="vs">`/</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">resource</span><span class="sc">}</span><span class="vs">/</span><span class="sc">${</span>id<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co">// src/api/UserRepository.js</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { BaseRepository } <span class="im">from</span> <span class="st">&#39;./BaseRepository&#39;</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> apiClient <span class="im">from</span> <span class="st">&#39;./client&#39;</span><span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> UserRepository <span class="kw">extends</span> BaseRepository {</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">constructor</span>() {</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">super</span>(<span class="st">&#39;users&#39;</span>)<span class="op">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Custom resource-specific endpoint</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">getProfile</span>() {</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> apiClient<span class="op">.</span><span class="fu">get</span>(<span class="vs">`/</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">resource</span><span class="sc">}</span><span class="vs">/me/profile`</span>)<span class="op">;</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="im">default</span> <span class="kw">new</span> <span class="fu">UserRepository</span>()<span class="op">;</span></span></code></pre></div>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Drastically reduces boilerplate for large applications with standard
+CRUD resources.</li>
+<li>Promotes object-oriented design and consistency.</li>
+</ul>
+<hr />
+<h2 id="4-the-centralized-endpoint-registry-pattern">4. The Centralized
+Endpoint Registry Pattern</h2>
+<p>This pattern separates endpoint URLs into a dedicated configuration
+map or dictionary, decoupling URI routing definitions from the HTTP
+execution logic.</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">// src/api/endpoints.js</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> ENDPOINTS <span class="op">=</span> {</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">AUTH</span><span class="op">:</span> {</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">LOGIN</span><span class="op">:</span> <span class="st">&#39;/auth/login&#39;</span><span class="op">,</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">REGISTER</span><span class="op">:</span> <span class="st">&#39;/auth/register&#39;</span><span class="op">,</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">REFRESH</span><span class="op">:</span> <span class="st">&#39;/auth/refresh&#39;</span><span class="op">,</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">USERS</span><span class="op">:</span> {</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">BASE</span><span class="op">:</span> <span class="st">&#39;/users&#39;</span><span class="op">,</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">DETAIL</span><span class="op">:</span> (id) <span class="kw">=&gt;</span> <span class="vs">`/users/</span><span class="sc">${</span>id<span class="sc">}</span><span class="vs">`</span><span class="op">,</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">PERMISSIONS</span><span class="op">:</span> (id) <span class="kw">=&gt;</span> <span class="vs">`/users/</span><span class="sc">${</span>id<span class="sc">}</span><span class="vs">/permissions`</span><span class="op">,</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">// src/api/auth.js</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> apiClient <span class="im">from</span> <span class="st">&#39;./client&#39;</span><span class="op">;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { ENDPOINTS } <span class="im">from</span> <span class="st">&#39;./endpoints&#39;</span><span class="op">;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> login <span class="op">=</span> (credentials) <span class="kw">=&gt;</span> apiClient<span class="op">.</span><span class="fu">post</span>(ENDPOINTS<span class="op">.</span><span class="at">AUTH</span><span class="op">.</span><span class="at">LOGIN</span><span class="op">,</span> credentials)<span class="op">;</span></span></code></pre></div>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Single source of truth for API routes.</li>
+<li>Quick verification of route structures when backend API contracts
+change.</li>
+</ul>
+<hr />
+<h2 id="summary-of-pattern-selection">Summary of Pattern Selection</h2>
+<ul>
+<li><strong>Base Axios Instance:</strong> Mandatory foundation for all
+architectures.</li>
+<li><strong>Module / Service Pattern:</strong> Ideal for small-to-medium
+applications or APIs where endpoints vary significantly in design.</li>
+<li><strong>Repository Pattern:</strong> Best suited for large,
+enterprise applications interacting with strictly uniform REST
+APIs.</li>
+<li><strong>Endpoint Registry Pattern:</strong> Optimal when API
+versioning and route mapping change frequently.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

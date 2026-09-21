@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Content-Type for Binary Data and ArrayBuffers - axios</title>
+    <meta name="description" content="When sending binary data or ArrayBuffer instances using Axios, the library determines the HTTP Content-Type header through automatic data-type inspection in its request transformers. Because raw memory buffers lack inherent metadata, Axios identifies the">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-content-type-for-binary-data-and-array-buffers">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Content-Type for Binary Data and ArrayBuffers - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-content-type-for-binary-data-and-array-buffers" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When sending binary data or ArrayBuffer instances using Axios, the library determines the HTTP Content-Type header through automatic data-type inspection in its request transformers. Because raw memory buffers lack inherent metadata, Axios identifies the" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-content-type-for-binary-data-and-arraybuffers">Axios
+Content-Type for Binary Data and ArrayBuffers</h1>
+<p>When sending binary data or <code>ArrayBuffer</code> instances using
+Axios, the library determines the HTTP <code>Content-Type</code> header
+through automatic data-type inspection in its request transformers.
+Because raw memory buffers lack inherent metadata, Axios identifies the
+underlying object type at runtime and either falls back to standard
+binary MIME types like <code>application/octet-stream</code> or relies
+on explicit user configuration.</p>
+<h3 id="axios-runtime-type-checking">Axios Runtime Type Checking</h3>
+<p>Axios processes outgoing payloads through its default request
+transformers (<code>transformRequest</code>). During this phase, Axios
+uses internal utility functions to detect the exact format of the
+<code>data</code> payload:</p>
+<ul>
+<li><strong><code>ArrayBuffer</code> and
+<code>ArrayBufferView</code>:</strong> Axios checks if the object is an
+<code>ArrayBuffer</code> using <code>ArrayBuffer.isView()</code> or
+<code>instanceof ArrayBuffer</code>.</li>
+<li><strong>Node.js <code>Buffer</code>:</strong> In Node.js
+environments, it checks for native <code>Buffer</code> instances via
+<code>Buffer.isBuffer()</code>.</li>
+<li><strong><code>Blob</code>:</strong> In browser environments, Axios
+checks if the object is an instance of <code>Blob</code>.</li>
+<li><strong><code>FormData</code>:</strong> Axios inspects if the
+payload is a <code>FormData</code> instance.</li>
+</ul>
+<h3 id="automatic-header-assignment">Automatic Header Assignment</h3>
+<ol type="1">
+<li><strong>ArrayBuffer, TypedArrays, and Node Buffers:</strong> When
+raw binary formats such as <code>ArrayBuffer</code>,
+<code>Uint8Array</code>, or Node.js <code>Buffer</code> are supplied
+without a predefined header, Axios cannot infer the specific file format
+(e.g., JPEG, PDF, ZIP) because raw bytes contain no MIME metadata. Axios
+automatically sets the <code>Content-Type</code> header to
+<code>application/octet-stream</code> or leaves the transport adapter to
+handle raw byte streaming.</li>
+<li><strong>Blob Objects:</strong> Unlike <code>ArrayBuffer</code>, a
+<code>Blob</code> contains a native <code>type</code> property. If you
+pass a <code>Blob</code> in the browser and have not manually defined a
+header, Axios utilizes the <code>Blob.type</code> value to set the
+<code>Content-Type</code> (for example, <code>image/png</code>). If the
+<code>Blob.type</code> is empty, it falls back to
+<code>application/octet-stream</code>.</li>
+<li><strong>FormData:</strong> When sending binary data inside a
+<code>FormData</code> container (multipart upload), Axios removes any
+static <code>Content-Type</code> header to let the browser or adapter
+automatically generate <code>multipart/form-data</code> along with the
+appropriate boundary string.</li>
+</ol>
+<h3 id="overriding-the-content-type-manually">Overriding the
+Content-Type Manually</h3>
+<p>Because an <code>ArrayBuffer</code> defaults to
+<code>application/octet-stream</code>, you must explicitly declare the
+<code>Content-Type</code> in the request configuration if the receiving
+server expects a specific MIME type:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> buffer <span class="op">=</span> <span class="kw">new</span> <span class="bu">ArrayBuffer</span>(<span class="dv">8</span>)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;https://api.example.com/upload&#39;</span><span class="op">,</span> buffer<span class="op">,</span> {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;application/pdf&#39;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>When an explicit <code>Content-Type</code> is provided in the
+configuration object, Axios respects the user definition and overrides
+its automatic type deduction.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

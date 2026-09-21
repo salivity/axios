@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Share Cookies Across Subdomains in Axios - axios</title>
+    <meta name="description" content="Sharing cookies across subdomains when using the Axios HTTP client requires proper configuration across both the backend server and the frontend client. To successfully send and receive session or authentication cookies between origins like app.example.c">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-to-share-cookies-across-subdomains-in-axios">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Share Cookies Across Subdomains in Axios - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-to-share-cookies-across-subdomains-in-axios" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Sharing cookies across subdomains when using the Axios HTTP client requires proper configuration across both the backend server and the frontend client. To successfully send and receive session or authentication cookies between origins like app.example.c" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-share-cookies-across-subdomains-in-axios">How to Share
+Cookies Across Subdomains in Axios</h1>
+<p>Sharing cookies across subdomains when using the Axios HTTP client
+requires proper configuration across both the backend server and the
+frontend client. To successfully send and receive session or
+authentication cookies between origins like <code>app.example.com</code>
+and <code>api.example.com</code>, you must scope the cookie to the
+parent domain on the server, configure Cross-Origin Resource Sharing
+(CORS) headers properly, and explicitly tell Axios to include
+credentials with requests.</p>
+<h3 id="1-set-the-correct-cookie-attributes-on-the-backend">1. Set the
+Correct Cookie Attributes on the Backend</h3>
+<p>By default, cookies set by a server are only accessible to the exact
+domain that issued them. To make a cookie accessible across all
+subdomains, the backend must specify the parent domain in the
+<code>Set-Cookie</code> header.</p>
+<ul>
+<li><strong>Domain Attribute:</strong> Set
+<code>Domain=.example.com</code> (or <code>Domain=example.com</code>).
+This allows any subdomain (such as <code>auth.example.com</code> or
+<code>api.example.com</code>) to read and send the cookie.</li>
+<li><strong>SameSite Attribute:</strong> Set <code>SameSite=Lax</code>
+(recommended for standard navigation/APIs within the same parent domain)
+or <code>SameSite=None</code> (if crossing different top-level domains,
+which requires <code>Secure: true</code>).</li>
+<li><strong>Secure Attribute:</strong> Set <code>Secure=true</code> to
+ensure cookies are only transmitted over HTTPS.</li>
+<li><strong>HttpOnly Attribute:</strong> Set <code>HttpOnly=true</code>
+to prevent client-side JavaScript from accessing sensitive tokens,
+mitigating XSS risks.</li>
+</ul>
+<p>Example of an HTTP response header from the server:</p>
+<pre class="http"><code>Set-Cookie: sessionId=abc123xyz; Domain=.example.com; Path=/; Secure; HttpOnly; SameSite=Lax</code></pre>
+<hr />
+<h3 id="2-configure-backend-cors-headers">2. Configure Backend CORS
+Headers</h3>
+<p>Because requests between subdomains are treated as cross-origin
+requests, the receiving API server must explicitly authorize the
+requesting origin and allow credentials.</p>
+<ol type="1">
+<li><strong><code>Access-Control-Allow-Origin</code></strong>: Specify
+the exact requesting subdomain (e.g.,
+<code>https://app.example.com</code>). You <strong>cannot</strong> use
+the wildcard <code>*</code> when credentials are used.</li>
+<li><strong><code>Access-Control-Allow-Credentials</code></strong>: Set
+this header to <code>true</code>.</li>
+</ol>
+<p>Example Express.js configuration:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cors <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;cors&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">use</span>(<span class="fu">cors</span>({</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">origin</span><span class="op">:</span> <span class="st">&#39;https://app.example.com&#39;</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">credentials</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>}))<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="3-enable-credentials-in-axios">3. Enable Credentials in
+Axios</h3>
+<p>On the frontend, Axios does not send cross-site cookies by default.
+You must enable the <code>withCredentials</code> option either on a
+specific request or globally across an Axios instance.</p>
+<h4 id="option-a-global-configuration-recommended">Option A: Global
+Configuration (Recommended)</h4>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com&#39;</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">withCredentials</span><span class="op">:</span> <span class="kw">true</span> <span class="co">// Automatically sends cookies on all requests</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="im">default</span> apiClient<span class="op">;</span></span></code></pre></div>
+<h4 id="option-b-per-request-configuration">Option B: Per-Request
+Configuration</h4>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/user/profile&#39;</span><span class="op">,</span> {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">withCredentials</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">then</span>(response <span class="kw">=&gt;</span> {</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(response<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">catch</span>(error <span class="kw">=&gt;</span> {</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Request failed&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="4-local-development-setup">4. Local Development Setup</h3>
+<p>Subdomain cookie sharing cannot be tested directly using
+<code>localhost</code> because browsers treat <code>localhost</code> as
+a single host without standard subdomain resolution.</p>
+<p>To test locally:</p>
+<ol type="1">
+<li>Map custom domains in your local hosts file (<code>/etc/hosts</code>
+on macOS/Linux or <code>C:\Windows\System32\drivers\etc\hosts</code> on
+Windows):
+<pre class="text"><code>127.0.0.1 app.localtest.me
+127.0.0.1 api.localtest.me</code></pre></li>
+<li>Set the cookie domain to <code>.localtest.me</code> on your local
+backend.</li>
+<li>Access your application via
+<code>http://app.localtest.me:3000</code>.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

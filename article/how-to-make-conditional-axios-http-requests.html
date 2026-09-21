@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Make Conditional Axios HTTP Requests - axios</title>
+    <meta name="description" content="Conditional HTTP requests allow clients to optimize bandwidth and improve application speed by asking the server to return data only if it has changed since the last request. This article explains how to implement conditional requests in Axios using the">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-to-make-conditional-axios-http-requests">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Make Conditional Axios HTTP Requests - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-to-make-conditional-axios-http-requests" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Conditional HTTP requests allow clients to optimize bandwidth and improve application speed by asking the server to return data only if it has changed since the last request. This article explains how to implement conditional requests in Axios using the" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-make-conditional-axios-http-requests">How to Make
+Conditional Axios HTTP Requests</h1>
+<p>Conditional HTTP requests allow clients to optimize bandwidth and
+improve application speed by asking the server to return data only if it
+has changed since the last request. This article explains how to
+implement conditional requests in Axios using the
+<code>If-None-Match</code> (with ETags) and
+<code>If-Modified-Since</code> (with timestamps) headers, how to
+configure Axios to handle <code>304 Not Modified</code> status codes,
+and how to combine these techniques with client-side caching.</p>
+<h2 id="understanding-conditional-headers">Understanding Conditional
+Headers</h2>
+<p>Conditional requests rely on validators received from the initial
+server response:</p>
+<ul>
+<li><strong>ETag / <code>If-None-Match</code>:</strong> The server
+returns a unique identifier (hash) in the <code>ETag</code> header. On
+subsequent requests, the client sends this identifier back using the
+<code>If-None-Match</code> header.</li>
+<li><strong>Last-Modified / <code>If-Modified-Since</code>:</strong> The
+server sends a timestamp in the <code>Last-Modified</code> header. On
+subsequent requests, the client sends this date back using the
+<code>If-Modified-Since</code> header.</li>
+</ul>
+<p>If the resource has not changed, the server responds with an HTTP
+status <code>304 Not Modified</code> and an empty body, signaling that
+the client should use its locally stored copy.</p>
+<h2 id="sending-conditional-headers-with-axios">Sending Conditional
+Headers with Axios</h2>
+<p>You can pass conditional headers directly into the
+<code>headers</code> property of the Axios request configuration
+object.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">fetchResource</span>(url<span class="op">,</span> cachedEtag<span class="op">,</span> cachedLastModified) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">try</span> {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">get</span>(url<span class="op">,</span> {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">...</span>(cachedEtag <span class="op">&amp;&amp;</span> { <span class="st">&#39;If-None-Match&#39;</span><span class="op">:</span> cachedEtag })<span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">...</span>(cachedLastModified <span class="op">&amp;&amp;</span> { <span class="st">&#39;If-Modified-Since&#39;</span><span class="op">:</span> cachedLastModified })<span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>      }<span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Ensure Axios does not throw an error on 304 status codes</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>      <span class="dt">validateStatus</span><span class="op">:</span> (status) <span class="kw">=&gt;</span> (status <span class="op">&gt;=</span> <span class="dv">200</span> <span class="op">&amp;&amp;</span> status <span class="op">&lt;</span> <span class="dv">300</span>) <span class="op">||</span> status <span class="op">===</span> <span class="dv">304</span><span class="op">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (response<span class="op">.</span><span class="at">status</span> <span class="op">===</span> <span class="dv">304</span>) {</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>      <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Resource not modified. Using cached data.&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>      <span class="cf">return</span> <span class="kw">null</span><span class="op">;</span> <span class="co">// Handle using local cache</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Capture headers for future conditional requests</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> newEtag <span class="op">=</span> response<span class="op">.</span><span class="at">headers</span>[<span class="st">&#39;etag&#39;</span>]<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> newLastModified <span class="op">=</span> response<span class="op">.</span><span class="at">headers</span>[<span class="st">&#39;last-modified&#39;</span>]<span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>      <span class="dt">data</span><span class="op">:</span> response<span class="op">.</span><span class="at">data</span><span class="op">,</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>      <span class="dt">etag</span><span class="op">:</span> newEtag<span class="op">,</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>      <span class="dt">lastModified</span><span class="op">:</span> newLastModified<span class="op">,</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    }<span class="op">;</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">catch</span> (error) {</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Request failed:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">throw</span> error<span class="op">;</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="handling-304-status-codes-with-validatestatus">Handling 304
+Status Codes with <code>validateStatus</code></h2>
+<p>By default, Axios rejects promises for any HTTP status code outside
+the range of <code>2xx</code>. Because <code>304 Not Modified</code>
+falls under <code>3xx</code>, Axios will throw an error unless
+configured otherwise.</p>
+<p>To handle 304 responses gracefully, use the
+<code>validateStatus</code> option:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/data&#39;</span><span class="op">,</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;If-None-Match&#39;</span><span class="op">:</span> <span class="st">&#39;&quot;686897696a7c876b7e&quot;&#39;</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">validateStatus</span><span class="op">:</span> (status) <span class="kw">=&gt;</span> (status <span class="op">&gt;=</span> <span class="dv">200</span> <span class="op">&amp;&amp;</span> status <span class="op">&lt;</span> <span class="dv">300</span>) <span class="op">||</span> status <span class="op">===</span> <span class="dv">304</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="implementing-a-basic-in-memory-cache">Implementing a Basic
+In-Memory Cache</h2>
+<p>To fully leverage conditional requests, you should store the response
+body alongside its validator (<code>ETag</code> or
+<code>Last-Modified</code>):</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cache <span class="op">=</span> <span class="kw">new</span> <span class="bu">Map</span>()<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">getCachedResource</span>(url) {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> cached <span class="op">=</span> cache<span class="op">.</span><span class="fu">get</span>(url)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> headers <span class="op">=</span> {}<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (cached<span class="op">?.</span><span class="at">etag</span>) {</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    headers[<span class="st">&#39;If-None-Match&#39;</span>] <span class="op">=</span> cached<span class="op">.</span><span class="at">etag</span><span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (cached<span class="op">?.</span><span class="at">lastModified</span>) {</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    headers[<span class="st">&#39;If-Modified-Since&#39;</span>] <span class="op">=</span> cached<span class="op">.</span><span class="at">lastModified</span><span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">get</span>(url<span class="op">,</span> {</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    headers<span class="op">,</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="dt">validateStatus</span><span class="op">:</span> (status) <span class="kw">=&gt;</span> (status <span class="op">&gt;=</span> <span class="dv">200</span> <span class="op">&amp;&amp;</span> status <span class="op">&lt;</span> <span class="dv">300</span>) <span class="op">||</span> status <span class="op">===</span> <span class="dv">304</span><span class="op">,</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (response<span class="op">.</span><span class="at">status</span> <span class="op">===</span> <span class="dv">304</span>) {</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> cached<span class="op">.</span><span class="at">data</span><span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> freshData <span class="op">=</span> {</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="dt">data</span><span class="op">:</span> response<span class="op">.</span><span class="at">data</span><span class="op">,</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>    <span class="dt">etag</span><span class="op">:</span> response<span class="op">.</span><span class="at">headers</span>[<span class="st">&#39;etag&#39;</span>]<span class="op">,</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="dt">lastModified</span><span class="op">:</span> response<span class="op">.</span><span class="at">headers</span>[<span class="st">&#39;last-modified&#39;</span>]<span class="op">,</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>  cache<span class="op">.</span><span class="fu">set</span>(url<span class="op">,</span> freshData)<span class="op">;</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> freshData<span class="op">.</span><span class="at">data</span><span class="op">;</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="automating-with-axios-interceptors">Automating with Axios
+Interceptors</h2>
+<p>If you need conditional requests across your entire application, you
+can use Axios interceptors to automatically append stored ETags or
+timestamps before requests are sent, and update your cache when
+<code>200 OK</code> or <code>304 Not Modified</code> responses are
+received. Alternatively, existing ecosystem libraries such as
+<code>axios-cache-interceptor</code> offer built-in conditional request
+handling out of the box.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

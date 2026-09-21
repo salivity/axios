@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Configure Axios Proxy Authorization Headers - axios</title>
+    <meta name="description" content="This article provides a complete guide on how to configure proxy authentication in the Axios HTTP client when operating behind corporate proxies. You will learn how to use Axios's built-in proxy configuration, how to handle HTTPS traffic using dedicated">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-to-configure-axios-proxy-authorization-headers">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Configure Axios Proxy Authorization Headers - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-to-configure-axios-proxy-authorization-headers" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a complete guide on how to configure proxy authentication in the Axios HTTP client when operating behind corporate proxies. You will learn how to use Axios's built-in proxy configuration, how to handle HTTPS traffic using dedicated" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-configure-axios-proxy-authorization-headers">How to
+Configure Axios Proxy Authorization Headers</h1>
+<p>This article provides a complete guide on how to configure proxy
+authentication in the Axios HTTP client when operating behind corporate
+proxies. You will learn how to use Axios's built-in proxy configuration,
+how to handle HTTPS traffic using dedicated proxy agents like
+<code>https-proxy-agent</code>, and how to manually construct custom
+<code>Proxy-Authorization</code> headers for complex network
+environments.</p>
+<hr />
+<h2 id="1-using-built-in-axios-proxy-settings">1. Using Built-in Axios
+Proxy Settings</h2>
+<p>For standard HTTP proxy requests, Axios provides a native
+<code>proxy</code> configuration object. When you supply the
+<code>auth</code> property containing a username and password, Axios
+automatically encodes the credentials in Base64 and attaches the
+<code>Proxy-Authorization: Basic &lt;base64-credentials&gt;</code>
+header to the request.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;http://example.com/api/data&#39;</span><span class="op">,</span> {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">proxy</span><span class="op">:</span> {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">protocol</span><span class="op">:</span> <span class="st">&#39;http&#39;</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">host</span><span class="op">:</span> <span class="st">&#39;proxy.corporate.local&#39;</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">port</span><span class="op">:</span> <span class="dv">8080</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">auth</span><span class="op">:</span> {</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">username</span><span class="op">:</span> <span class="st">&#39;corporate_user&#39;</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">password</span><span class="op">:</span> <span class="st">&#39;corporate_password&#39;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">then</span>(response <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(response<span class="op">.</span><span class="at">data</span>))</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">catch</span>(error <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Request failed:&#39;</span><span class="op">,</span> error<span class="op">.</span><span class="at">message</span>))<span class="op">;</span></span></code></pre></div>
+<hr />
+<h2 id="2-handling-https-corporate-proxies-with-https-proxy-agent">2.
+Handling HTTPS Corporate Proxies with
+<code>https-proxy-agent</code></h2>
+<p>The native Axios <code>proxy</code> object often fails when tunneling
+requests over HTTPS because of how the Node.js HTTP runtime handles the
+<code>CONNECT</code> method. To reliably pass proxy authentication over
+HTTPS in a corporate environment, use the <code>https-proxy-agent</code>
+library.</p>
+<h3 id="installation">Installation</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install https-proxy-agent</span></code></pre></div>
+<h3 id="implementation">Implementation</h3>
+<p>Include the authentication credentials directly in the proxy
+connection URL, and pass the agent to Axios via the
+<code>httpsAgent</code> config option:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> { HttpsProxyAgent } <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;https-proxy-agent&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> proxyHost <span class="op">=</span> <span class="st">&#39;proxy.corporate.local&#39;</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> proxyPort <span class="op">=</span> <span class="dv">8080</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> username <span class="op">=</span> <span class="pp">encodeURIComponent</span>(<span class="st">&#39;corporate_user&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> password <span class="op">=</span> <span class="pp">encodeURIComponent</span>(<span class="st">&#39;corporate_password&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Construct the proxy URL with credentials</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> proxyUrl <span class="op">=</span> <span class="vs">`http://</span><span class="sc">${</span>username<span class="sc">}</span><span class="vs">:</span><span class="sc">${</span>password<span class="sc">}</span><span class="vs">@</span><span class="sc">${</span>proxyHost<span class="sc">}</span><span class="vs">:</span><span class="sc">${</span>proxyPort<span class="sc">}</span><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpsAgent <span class="op">=</span> <span class="kw">new</span> <span class="fu">HttpsProxyAgent</span>(proxyUrl)<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> client <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  httpsAgent<span class="op">,</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">proxy</span><span class="op">:</span> <span class="kw">false</span> <span class="co">// Disables Axios&#39;s default proxy handling</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>client<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.external-service.com/data&#39;</span>)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">then</span>(response <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(response<span class="op">.</span><span class="at">data</span>))</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">catch</span>(error <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;HTTPS Proxy Request Failed:&#39;</span><span class="op">,</span> error<span class="op">.</span><span class="at">message</span>))<span class="op">;</span></span></code></pre></div>
+<hr />
+<h2 id="3-manually-setting-the-proxy-authorization-header">3. Manually
+Setting the Proxy-Authorization Header</h2>
+<p>If your corporate proxy requires custom headers or token-based proxy
+authentication (such as Bearer or NTLM tokens), you can manually compute
+and inject the header into the agent configuration or request
+headers.</p>
+<h3 id="basic-authentication-example">Basic Authentication Example</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> { HttpsProxyAgent } <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;https-proxy-agent&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> username <span class="op">=</span> <span class="st">&#39;corporate_user&#39;</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> password <span class="op">=</span> <span class="st">&#39;corporate_password&#39;</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> base64Auth <span class="op">=</span> <span class="bu">Buffer</span><span class="op">.</span><span class="fu">from</span>(<span class="vs">`</span><span class="sc">${</span>username<span class="sc">}</span><span class="vs">:</span><span class="sc">${</span>password<span class="sc">}</span><span class="vs">`</span>)<span class="op">.</span><span class="fu">toString</span>(<span class="st">&#39;base64&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpsAgent <span class="op">=</span> <span class="kw">new</span> <span class="fu">HttpsProxyAgent</span>(<span class="st">&#39;http://proxy.corporate.local:8080&#39;</span><span class="op">,</span> {</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Proxy-Authorization&#39;</span><span class="op">:</span> <span class="vs">`Basic </span><span class="sc">${</span>base64Auth<span class="sc">}</span><span class="vs">`</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.external-service.com/data&#39;</span><span class="op">,</span> {</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  httpsAgent<span class="op">,</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">proxy</span><span class="op">:</span> <span class="kw">false</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">then</span>(response <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(response<span class="op">.</span><span class="at">data</span>))</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">catch</span>(error <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(error<span class="op">.</span><span class="at">message</span>))<span class="op">;</span></span></code></pre></div>
+<hr />
+<h2 id="4-corporate-environment-considerations">4. Corporate Environment
+Considerations</h2>
+<ul>
+<li><strong>SSL/TLS Inspection:</strong> Corporate proxies often perform
+SSL inspection using custom Certificate Authorities (CAs). If you
+encounter <code>UNABLE_TO_VERIFY_LEAF_SIGNATURE</code> or
+<code>SELF_SIGNED_CERT_IN_CHAIN</code> errors, provide the corporate
+root certificate via the agent:
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> fs <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;fs&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpsAgent <span class="op">=</span> <span class="kw">new</span> <span class="fu">HttpsProxyAgent</span>(<span class="st">&#39;http://user:pass@proxy:8080&#39;</span><span class="op">,</span> {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ca</span><span class="op">:</span> fs<span class="op">.</span><span class="fu">readFileSync</span>(<span class="st">&#39;/path/to/corporate-ca.pem&#39;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div></li>
+<li><strong>Special Characters in Passwords:</strong> Always use
+<code>encodeURIComponent()</code> on your username and password when
+formatting proxy connection strings to prevent URL parsing errors.</li>
+<li><strong>Environment Variables:</strong> For scalable setups, use
+<code>process.env.HTTPS_PROXY</code> or
+<code>process.env.HTTP_PROXY</code> to populate proxy configuration
+rather than hardcoding credentials into source code.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

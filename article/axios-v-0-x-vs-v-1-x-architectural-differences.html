@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios v0.x vs v1.x Architectural Differences - axios</title>
+    <meta name="description" content="This article provides an overview of the major architectural and functional differences between Axios v0.x and Axios v1.x. It details the transition from legacy, bespoke patterns to modern web standards, including native ECMAScript Module (ESM) support,">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-v-0-x-vs-v-1-x-architectural-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios v0.x vs v1.x Architectural Differences - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-v-0-x-vs-v-1-x-architectural-differences" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of the major architectural and functional differences between Axios v0.x and Axios v1.x. It details the transition from legacy, bespoke patterns to modern web standards, including native ECMAScript Module (ESM) support," />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-v0x-vs-v1x-architectural-differences">Axios v0.x vs v1.x
+Architectural Differences</h1>
+<p>This article provides an overview of the major architectural and
+functional differences between Axios v0.x and Axios v1.x. It details the
+transition from legacy, bespoke patterns to modern web standards,
+including native ECMAScript Module (ESM) support, a standardized adapter
+pipeline, built-in TypeScript typings, and modern cancellation handling
+using standard Web APIs.</p>
+<h3 id="1-modernized-module-system-and-native-esm-support">1. Modernized
+Module System and Native ESM Support</h3>
+<p>Axios v0.x was built primarily as a CommonJS (CJS) library with UMD
+wrappers for browser environments. This legacy bundling often led to
+bundling issues, tree-shaking failures, and module resolution friction
+in modern build tools like Vite, Rollup, and native Node.js ESM
+environments.</p>
+<p>Axios v1.x introduced full dual-package support using the standard
+<code>exports</code> map in <code>package.json</code>. It provides
+native ECMAScript Modules (<code>import</code>) alongside CommonJS
+(<code>require</code>) builds. This architectural shift ensures seamless
+execution in both Node.js native ESM setups and modern browser bundlers
+without relying on synthetic default imports or custom polyfills.</p>
+<h3 id="2-standardization-on-abortcontroller-for-cancellation">2.
+Standardization on AbortController for Cancellation</h3>
+<p>In Axios v0.x, request cancellation relied on a proprietary
+<code>CancelToken</code> API based on a deprecated ECMAScript proposal.
+This required developers to instantiate custom cancel tokens and manage
+cancel sources specific only to Axios.</p>
+<p>Axios v1.x standardized request cancellation by adding first-class
+support for the native <code>AbortController</code> and
+<code>AbortSignal</code> APIs. While <code>CancelToken</code> was
+retained for backward compatibility, <code>AbortSignal</code> is now the
+primary mechanism for aborting requests:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> controller <span class="op">=</span> <span class="kw">new</span> <span class="fu">AbortController</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/api/data&#39;</span><span class="op">,</span> {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">signal</span><span class="op">:</span> controller<span class="op">.</span><span class="at">signal</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Cancel the request</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>controller<span class="op">.</span><span class="fu">abort</span>()<span class="op">;</span></span></code></pre></div>
+<p>This aligns Axios with the native Fetch API and standard browser and
+Node.js runtime specifications.</p>
+<h3 id="3-native-typescript-architecture">3. Native TypeScript
+Architecture</h3>
+<p>Axios v0.x originally bundled external or manually maintained
+TypeScript definition files that frequently had synchronization issues
+with the underlying JavaScript implementation. Typing for
+configurations, custom instances, and interceptors was often brittle or
+required extensive type casting.</p>
+<p>Axios v1.x completely overhauled its TypeScript architecture. The
+typings are natively integrated into the core codebase, offering:</p>
+<ul>
+<li>Strict typing for generic response data structures
+(<code>axios.get&lt;T&gt;()</code>).</li>
+<li>Strongly typed interceptor managers.</li>
+<li>Improved inference for custom headers, HTTP methods, and status
+codes.</li>
+<li>Granular type definitions for custom adapters and internal
+configuration objects.</li>
+</ul>
+<h3 id="4-overhauled-adapter-architecture">4. Overhauled Adapter
+Architecture</h3>
+<p>Axios abstracts HTTP communication through adapters—using the
+<code>http</code> module in Node.js and <code>XMLHttpRequest</code> in
+browsers. In v0.x, these adapters were tightly coupled with the core
+request dispatching logic, making it difficult to write custom adapters
+or modify transport behaviors.</p>
+<p>In v1.x, the adapter pipeline was refactored:</p>
+<ul>
+<li><strong>Decoupled Execution:</strong> Adapters receive a clean,
+normalized configuration object and return standard Axios promises.</li>
+<li><strong>Custom Adapters:</strong> Defining and swapping custom
+adapters (such as custom Fetch-based adapters, Cloudflare Workers
+transports, or Web Worker adapters) is officially supported and
+straightforward via the <code>adapter</code> configuration array or
+function.</li>
+<li><strong>Stream Handling:</strong> Node.js stream management and
+browser stream parsing were normalized to ensure consistent payload
+handling across environments.</li>
+</ul>
+<h3 id="5-automated-formdata-and-multipart-handling">5. Automated
+FormData and Multipart Handling</h3>
+<p>Handling <code>multipart/form-data</code> in Axios v0.x required
+manually appending values to a browser <code>FormData</code> instance or
+manually configuring the third-party <code>form-data</code> package with
+custom header calculations in Node.js.</p>
+<p>Axios v1.x introduced built-in automatic serialization for
+<code>FormData</code> and plain JavaScript objects containing files or
+binary streams:</p>
+<ul>
+<li>Automatically detects JavaScript objects with file-like structures
+or native <code>FormData</code> instances.</li>
+<li>Sets appropriate <code>Content-Type</code> headers with boundaries
+automatically.</li>
+<li>Serializes nested objects and arrays to form structures without
+requiring manual boundary configurations.</li>
+</ul>
+<h3 id="6-standardized-axioserror-class-and-error-serialization">6.
+Standardized AxiosError Class and Error Serialization</h3>
+<p>Error handling in v0.x produced error objects with inconsistent
+property names across browser and Node.js environments.</p>
+<p>Axios v1.x standardized the <code>AxiosError</code> class
+hierarchy:</p>
+<ul>
+<li>Guarantees standardized properties: <code>code</code>,
+<code>config</code>, <code>request</code>, <code>response</code>, and
+<code>status</code>.</li>
+<li>Implements <code>AxiosError.from()</code> to safely normalize
+unknown caught exceptions into valid <code>AxiosError</code>
+instances.</li>
+<li>Implements standard <code>.toJSON()</code> serialization methods,
+enabling reliable logging in structured loggers (e.g., Winston, Pino, or
+Datadog) without losing the HTTP stack trace or response payload.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

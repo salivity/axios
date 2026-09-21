@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consequences of Unhandled Axios Promise Rejections - axios</title>
+    <meta name="description" content="Failing to catch rejected promises in Axios can lead to severe runtime issues, including crashed backend services, broken frontend user interfaces, and blind spots in application monitoring. Because Axios automatically rejects promises for HTTP status co">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/consequences-of-unhandled-axios-promise-rejections">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Consequences of Unhandled Axios Promise Rejections - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/consequences-of-unhandled-axios-promise-rejections" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Failing to catch rejected promises in Axios can lead to severe runtime issues, including crashed backend services, broken frontend user interfaces, and blind spots in application monitoring. Because Axios automatically rejects promises for HTTP status co" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="consequences-of-unhandled-axios-promise-rejections">Consequences
+of Unhandled Axios Promise Rejections</h1>
+<p>Failing to catch rejected promises in Axios can lead to severe
+runtime issues, including crashed backend services, broken frontend user
+interfaces, and blind spots in application monitoring. Because Axios
+automatically rejects promises for HTTP status codes outside the 2xx
+range or when network failures occur, handling these errors is essential
+for system stability. This article outlines the primary consequences of
+leaving rejected Axios promises unhandled in both Node.js and browser
+environments.</p>
+<h2 id="nodejs-application-crashes">Node.js Application Crashes</h2>
+<p>In Node.js environments (version 15 and later), an unhandled promise
+rejection triggers an <code>UnhandledPromiseRejection</code> event that
+terminates the Node.js process with a non-zero exit code by default. If
+an Axios request to a third-party API or microservice fails and lacks a
+<code>.catch()</code> block or a <code>try...catch</code> wrapper, the
+entire server process can crash, leading to unexpected downtime and
+service degradation for all users.</p>
+<h2 id="broken-ui-and-indefinite-loading-states">Broken UI and
+Indefinite Loading States</h2>
+<p>In client-side applications, unhandled Axios errors halt the
+execution of the surrounding asynchronous function. If your UI relies on
+code that executes after the request—such as toggling a loading spinner
+off, updating state, or redirecting the user—that code will never run.
+Consequently, users are left with frozen interfaces, permanent loading
+skeletons, or non-responsive buttons, without any feedback explaining
+that an error occurred.</p>
+<h2 id="interrupted-execution-flow-and-inconsistent-state">Interrupted
+Execution Flow and Inconsistent State</h2>
+<p>When an <code>await axios(...)</code> call throws an error that is
+not caught, any subsequent operations within that execution block are
+skipped. This can cause partial state updates or corrupted data flows.
+For example, if a function updates local storage, sends an API request,
+and then updates an in-memory cache, an unhandled rejection prevents the
+final step, leaving your application in an inconsistent or out-of-sync
+state.</p>
+<h2 id="loss-of-detailed-error-context-and-diagnostics">Loss of Detailed
+Error Context and Diagnostics</h2>
+<p>Axios attaches rich debugging information to its error objects,
+including <code>error.response.status</code>,
+<code>error.response.data</code>, and <code>error.config</code>. When
+rejections are ignored or bubbled up uncaught to global window or
+process handlers, this contextual metadata is often stripped or
+obscured. This makes diagnosing API contract mismatches, authentication
+token expirations, or rate limits difficult in production log
+aggregators and monitoring tools.</p>
+<h2 id="silent-failures-in-background-jobs">Silent Failures in
+Background Jobs</h2>
+<p>When Axios requests are executed inside background queues, scheduled
+tasks, or event listeners without rejection handlers, failures often
+pass completely unnoticed. The task silently terminates without
+retrying, marking the job as failed, or notifying engineers, leading to
+hidden data synchronization gaps that can compound over time.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

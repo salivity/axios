@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Handles CORS Preflight Failures - axios</title>
+    <meta name="description" content="When a Cross-Origin Resource Sharing (CORS) preflight request fails, the Axios HTTP client handles the failure by rejecting the request's Promise with a generic network error. Because browser security sandboxes intentionally block JavaScript from reading">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-handles-cors-preflight-failures">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Handles CORS Preflight Failures - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-handles-cors-preflight-failures" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When a Cross-Origin Resource Sharing (CORS) preflight request fails, the Axios HTTP client handles the failure by rejecting the request's Promise with a generic network error. Because browser security sandboxes intentionally block JavaScript from reading" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-handles-cors-preflight-failures">How Axios Handles
+CORS Preflight Failures</h1>
+<p>When a Cross-Origin Resource Sharing (CORS) preflight request fails,
+the Axios HTTP client handles the failure by rejecting the request's
+Promise with a generic network error. Because browser security sandboxes
+intentionally block JavaScript from reading details about failed
+preflight checks, Axios cannot access the server's HTTP status code,
+headers, or response body. This article explains the technical mechanics
+behind how Axios processes these preflight failures, what data is made
+available in the error object, and how developers can identify and
+resolve these issues.</p>
+<h2 id="the-browser-preflight-mechanism">The Browser Preflight
+Mechanism</h2>
+<p>Before Axios transmits a cross-origin HTTP request that is not
+considered a "simple request" (such as a request using <code>PUT</code>,
+<code>DELETE</code>, <code>PATCH</code>, custom headers, or
+<code>application/json</code> content types), the browser automatically
+dispatches an <code>OPTIONS</code> preflight request.</p>
+<p>The preflight request asks the destination server for permission to
+execute the actual request by checking response headers such as:</p>
+<ul>
+<li><code>Access-Control-Allow-Origin</code></li>
+<li><code>Access-Control-Allow-Methods</code></li>
+<li><code>Access-Control-Allow-Headers</code></li>
+</ul>
+<p>Axios operates on top of the browser's native
+<code>XMLHttpRequest</code> API. If the server fails to respond to the
+<code>OPTIONS</code> request, returns a non-2xx status code, or fails to
+provide the required <code>Access-Control-*</code> headers, the browser
+terminates the transaction before the actual request is sent.</p>
+<h2 id="how-axios-represents-a-preflight-failure">How Axios Represents a
+Preflight Failure</h2>
+<p>When the browser blocks a request due to a preflight failure, it does
+not provide specific CORS error details to the
+<code>XMLHttpRequest</code> object. Consequently, Axios formats the
+failure as follows:</p>
+<ul>
+<li><strong>Error Type:</strong> Axios throws or rejects the Promise
+with an <code>AxiosError</code>.</li>
+<li><strong><code>error.message</code>:</strong> Set to
+<code>"Network Error"</code>.</li>
+<li><strong><code>error.code</code>:</strong> Set to
+<code>"ERR_NETWORK"</code>.</li>
+<li><strong><code>error.response</code>:</strong> Evaluates to
+<code>undefined</code>. Because the browser suppresses the response for
+security reasons, Axios cannot populate response status codes (such as
+<code>401</code>, <code>403</code>, or <code>500</code>) or response
+bodies returned by the <code>OPTIONS</code> call.</li>
+<li><strong><code>error.request</code>:</strong> Contains the underlying
+<code>XMLHttpRequest</code> instance, typically with
+<code>status: 0</code> and <code>readyState: 4</code>.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;https://api.example.com/data&#39;</span><span class="op">,</span> { <span class="dt">key</span><span class="op">:</span> <span class="st">&#39;value&#39;</span> })</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">catch</span>((error) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (error<span class="op">.</span><span class="at">response</span>) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Not executed on CORS preflight failure</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>      <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(error<span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="at">status</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> <span class="cf">if</span> (error<span class="op">.</span><span class="at">request</span>) {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Executed: error.request exists, but error.response is undefined</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>      <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(error<span class="op">.</span><span class="at">message</span>)<span class="op">;</span> <span class="co">// &quot;Network Error&quot;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>      <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(error<span class="op">.</span><span class="at">code</span>)<span class="op">;</span>    <span class="co">// &quot;ERR_NETWORK&quot;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span></code></pre></div>
+<h2 id="handling-and-debugging-preflight-failures">Handling and
+Debugging Preflight Failures</h2>
+<p>Because Axios cannot inspect the root cause of a CORS preflight
+failure through application code, troubleshooting requires checking the
+environment outside the Axios error object:</p>
+<ol type="1">
+<li><strong>Inspect Browser Developer Tools:</strong> The browser's
+Console and Network tabs are the only client-side locations that log the
+exact reason for the failure (e.g., missing header, disallowed method,
+or mismatched origin).</li>
+<li><strong>Configure Server-Side Preflight Handling:</strong> Ensure
+the server explicitly handles <code>OPTIONS</code> requests, returns a
+successful HTTP status code (typically <code>200</code> or
+<code>204</code>), and sends the required
+<code>Access-Control-Allow-*</code> headers matching the client
+request.</li>
+<li><strong>Use Interceptors for Generic Fallbacks:</strong> Axios
+interceptors can catch <code>ERR_NETWORK</code> errors globally to
+trigger network-level fallback logic or alerts, though they cannot
+distinguish a CORS failure from an offline state or DNS failure
+programmatically.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syncing Auth State Across Tabs with Axios - axios</title>
+    <meta name="description" content="This article explains how to manage and synchronize user authentication state across multiple browser tabs using the Axios HTTP client. Because Axios is purely a request library without native cross-tab awareness, synchronizing authentication tokens, log">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/syncing-auth-state-across-tabs-with-axios">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Syncing Auth State Across Tabs with Axios - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/syncing-auth-state-across-tabs-with-axios" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to manage and synchronize user authentication state across multiple browser tabs using the Axios HTTP client. Because Axios is purely a request library without native cross-tab awareness, synchronizing authentication tokens, log" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="syncing-auth-state-across-tabs-with-axios">Syncing Auth State
+Across Tabs with Axios</h1>
+<p>This article explains how to manage and synchronize user
+authentication state across multiple browser tabs using the Axios HTTP
+client. Because Axios is purely a request library without native
+cross-tab awareness, synchronizing authentication tokens, logins, and
+logouts requires integrating Axios interceptors with browser-level APIs
+like the Storage Event, the Broadcast Channel API, or the Web Locks
+API.</p>
+<h2 id="the-role-of-axios-in-multi-tab-authentication">The Role of Axios
+in Multi-Tab Authentication</h2>
+<p>Axios does not maintain state across browser tabs by itself. Instead,
+it serves as the operational layer that attaches authentication
+credentials (such as JWT bearer tokens) to outgoing requests and reacts
+to authentication failures (such as <code>401 Unauthorized</code>
+responses).</p>
+<p>To achieve cross-tab synchronization, developers use Axios request
+and response interceptors as the bridge between in-memory application
+state and browser-level communication channels.</p>
+<h2 id="core-synchronization-mechanisms">Core Synchronization
+Mechanisms</h2>
+<p>Synchronizing authentication with Axios relies on pairing
+interceptors with one of several browser APIs.</p>
+<h3 id="1-the-storage-event-listener">1. The Storage Event Listener</h3>
+<p>When tokens are stored in <code>localStorage</code>, changes made in
+one tab trigger a <code>storage</code> event in all other open tabs of
+the same origin.</p>
+<ul>
+<li><strong>How it works:</strong> When Tab A logs in or updates a
+token, it writes the new value to <code>localStorage</code>. Tab B
+detects the <code>storage</code> event, updates its local memory, and
+ensures subsequent Axios calls use the updated credentials.</li>
+<li><strong>Logout Synchronization:</strong> If a user logs out in Tab
+A, removing the token from <code>localStorage</code> triggers an event
+in Tab B. Tab B clears its state and redirects the user to the login
+screen, preventing unauthorized Axios requests.</li>
+</ul>
+<h3 id="2-the-broadcast-channel-api">2. The Broadcast Channel API</h3>
+<p>The <code>BroadcastChannel</code> API allows direct, low-latency
+messaging between browser contexts (tabs, windows, iframes, and
+workers).</p>
+<ul>
+<li><strong>How it works:</strong> A dedicated channel (e.g.,
+<code>auth_channel</code>) is created across all tabs. When an
+authentication event occurs, messages like <code>AUTH_LOGOUT</code> or
+<code>TOKEN_REFRESHED</code> are broadcasted.</li>
+<li><strong>Axios Integration:</strong> When a tab refreshes an expired
+token via an Axios response interceptor, it broadcasts the new token to
+all tabs. Other tabs update their active Axios default headers or state
+variables without needing to re-fetch the token themselves.</li>
+</ul>
+<h3 id="3-synchronizing-token-refreshes-with-web-locks">3. Synchronizing
+Token Refreshes with Web Locks</h3>
+<p>A common issue in multi-tab setups is the "refresh race condition,"
+where multiple tabs make requests simultaneously with an expired token,
+causing each tab to trigger a separate refresh token request.</p>
+<p>To resolve this with Axios:</p>
+<ol type="1">
+<li><strong>Catching the Expiry:</strong> An Axios response interceptor
+intercepts a <code>401</code> status code.</li>
+<li><strong>Acquiring a Lock:</strong> The tab uses
+<code>navigator.locks.request('auth_refresh_lock', ...)</code> to ensure
+only one tab executes the refresh call.</li>
+<li><strong>Execution:</strong> The leader tab uses Axios to request a
+new access token from the server.</li>
+<li><strong>Broadcast &amp; Retry:</strong> Once resolved, the leader
+updates storage, broadcasts the new token to waiting tabs, and retries
+the failed Axios request. The other tabs release their locks, read the
+newly issued token, and retry their pending Axios calls.</li>
+</ol>
+<h2 id="dynamic-token-resolution-in-axios-interceptors">Dynamic Token
+Resolution in Axios Interceptors</h2>
+<p>To prevent tabs from sending stale tokens, Axios request interceptors
+should dynamically retrieve the token before every outgoing HTTP request
+rather than relying on a static default header configured at
+initialization:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">request</span><span class="op">.</span><span class="fu">use</span>((config) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Always fetch the latest token from storage or current memory</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> token <span class="op">=</span> localStorage<span class="op">.</span><span class="fu">getItem</span>(<span class="st">&#39;access_token&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (token) {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    config<span class="op">.</span><span class="at">headers</span><span class="op">.</span><span class="at">Authorization</span> <span class="op">=</span> <span class="vs">`Bearer </span><span class="sc">${</span>token<span class="sc">}</span><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> config<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>By querying the updated storage value on each execution, Axios
+immediately inherits any credential updates performed by adjacent
+browser tabs.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

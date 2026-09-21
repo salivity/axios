@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Monitor Download Progress Using Axios - axios</title>
+    <meta name="description" content="Tracking download progress in Axios allows you to provide real-time feedback to users during large file transfers. Axios includes a built-in configuration callback called onDownloadProgress that receives progress events containing the number of bytes tra">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-to-monitor-download-progress-using-axios">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Monitor Download Progress Using Axios - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-to-monitor-download-progress-using-axios" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Tracking download progress in Axios allows you to provide real-time feedback to users during large file transfers. Axios includes a built-in configuration callback called onDownloadProgress that receives progress events containing the number of bytes tra" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-monitor-download-progress-using-axios">How to Monitor
+Download Progress Using Axios</h1>
+<p>Tracking download progress in Axios allows you to provide real-time
+feedback to users during large file transfers. Axios includes a built-in
+configuration callback called <code>onDownloadProgress</code> that
+receives progress events containing the number of bytes transferred and
+the total file size. This guide explains how to configure this callback,
+calculate the download percentage, and handle scenarios where the total
+file size is unknown.</p>
+<h3 id="using-the-ondownloadprogress-callback">Using the
+<code>onDownloadProgress</code> Callback</h3>
+<p>To monitor incoming data, pass the <code>onDownloadProgress</code>
+function inside the request configuration object. The callback receives
+a <code>progressEvent</code> object with details about the current state
+of the download.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">axios</span>({</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">url</span><span class="op">:</span> <span class="st">&#39;https://example.com/large-file.zip&#39;</span><span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">method</span><span class="op">:</span> <span class="st">&#39;GET&#39;</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">responseType</span><span class="op">:</span> <span class="st">&#39;blob&#39;</span><span class="op">,</span> <span class="co">// or &#39;arraybuffer&#39; / &#39;stream&#39; depending on your platform</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">onDownloadProgress</span><span class="op">:</span> (progressEvent) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// In Axios v1.x, progress is often directly available as progressEvent.progress (0 to 1)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (progressEvent<span class="op">.</span><span class="at">total</span>) {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>      <span class="kw">const</span> percentCompleted <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">round</span>((progressEvent<span class="op">.</span><span class="at">loaded</span> <span class="op">*</span> <span class="dv">100</span>) <span class="op">/</span> progressEvent<span class="op">.</span><span class="at">total</span>)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>      <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Download progress: </span><span class="sc">${</span>percentCompleted<span class="sc">}</span><span class="vs">%`</span>)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>      <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Downloaded </span><span class="sc">${</span>progressEvent<span class="op">.</span><span class="at">loaded</span><span class="sc">}</span><span class="vs"> bytes (total size unknown)`</span>)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">then</span>((response) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Download complete!&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">catch</span>((error) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Download error:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="understanding-the-progress-event-object">Understanding the
+Progress Event Object</h3>
+<p>In recent versions of Axios (v1.x and newer), the
+<code>progressEvent</code> provides several helpful properties:</p>
+<ul>
+<li><strong><code>loaded</code></strong>: The total number of bytes
+transferred so far.</li>
+<li><strong><code>total</code></strong>: The total size of the file in
+bytes, derived from the server's <code>Content-Length</code> header.
+This will be <code>undefined</code> if the server does not supply this
+header.</li>
+<li><strong><code>progress</code></strong>: A decimal value between
+<code>0</code> and <code>1</code> representing completion ratio (only
+available when <code>total</code> is defined).</li>
+<li><strong><code>bytes</code></strong>: The number of bytes transferred
+in the most recent chunk.</li>
+<li><strong><code>estimated</code></strong>: Estimated time remaining in
+seconds (if calculated by the adapter).</li>
+<li><strong><code>rate</code></strong>: Current download speed in bytes
+per second.</li>
+</ul>
+<h3 id="server-requirements-the-content-length-header">Server
+Requirements: The <code>Content-Length</code> Header</h3>
+<p>For Axios to calculate an exact percentage, the server serving the
+file must include the <code>Content-Length</code> header in its HTTP
+response. If the server uses chunked transfer encoding
+(<code>Transfer-Encoding: chunked</code>) or omits
+<code>Content-Length</code>, <code>progressEvent.total</code> will be
+<code>undefined</code>.</p>
+<p>When <code>total</code> is unavailable:</p>
+<ol type="1">
+<li>You can display an indeterminate loading spinner.</li>
+<li>You can display only the amount of data transferred
+(<code>progressEvent.loaded</code>) formatted in megabytes or
+kilobytes.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loadedMB <span class="op">=</span> (progressEvent<span class="op">.</span><span class="at">loaded</span> <span class="op">/</span> (<span class="dv">1024</span> <span class="op">*</span> <span class="dv">1024</span>))<span class="op">.</span><span class="fu">toFixed</span>(<span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Transferred: </span><span class="sc">${</span>loadedMB<span class="sc">}</span><span class="vs"> MB`</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="browser-vs-nodejs-environments">Browser vs. Node.js
+Environments</h3>
+<ul>
+<li><strong>Browsers:</strong> The <code>onDownloadProgress</code>
+handler uses the underlying <code>XMLHttpRequest</code> progress event
+and works out of the box with standard response types like
+<code>blob</code> or <code>arraybuffer</code>.</li>
+<li><strong>Node.js:</strong> When working in a Node.js environment, set
+<code>responseType: 'stream'</code>. While
+<code>onDownloadProgress</code> works in modern Axios versions, you can
+also attach standard Node stream listeners
+(<code>response.data.on('data', chunk =&gt; ...)</code> ) to calculate
+byte totals directly from the stream.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

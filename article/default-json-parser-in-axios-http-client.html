@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Default JSON Parser in Axios HTTP Client - axios</title>
+    <meta name="description" content="This article explains the default JSON parsing mechanism used internally by the Axios HTTP client. It details the underlying parser responsible for serializing and deserializing data, how Axios processes incoming JSON payloads by default, and how develop">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/default-json-parser-in-axios-http-client">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Default JSON Parser in Axios HTTP Client - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/default-json-parser-in-axios-http-client" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the default JSON parsing mechanism used internally by the Axios HTTP client. It details the underlying parser responsible for serializing and deserializing data, how Axios processes incoming JSON payloads by default, and how develop" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="default-json-parser-in-axios-http-client">Default JSON Parser in
+Axios HTTP Client</h1>
+<p>This article explains the default JSON parsing mechanism used
+internally by the Axios HTTP client. It details the underlying parser
+responsible for serializing and deserializing data, how Axios processes
+incoming JSON payloads by default, and how developers can override this
+behavior when standard parsing does not meet specific application
+requirements.</p>
+<h2 id="the-default-parser-native-jsonparse">The Default Parser: Native
+JSON.parse()</h2>
+<p>Axios relies on the standard JavaScript <code>JSON.parse()</code>
+method as its default internal JSON parser. It does not include or
+depend on any third-party JSON parsing libraries.</p>
+<p>When a response is received from a server, Axios executes a series of
+default transform functions defined in
+<code>axios.defaults.transformResponse</code>. The standard
+transformation checks if the incoming data is a string and attempts to
+parse it using <code>JSON.parse()</code>. If parsing succeeds, the
+resulting JavaScript object is assigned to the
+<code>response.data</code> property; if parsing fails (for example, if
+the payload is plain text or HTML), Axios catches the syntax error
+silently and returns the raw string data untouched.</p>
+<h2 id="how-axios-implements-json-parsing-internally">How Axios
+Implements JSON Parsing Internally</h2>
+<p>Under the hood, Axios configures its default transformation in the
+following manner:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>transformResponse<span class="op">:</span> [</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">function</span> <span class="fu">transformResponse</span>(data) {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="kw">typeof</span> data <span class="op">===</span> <span class="st">&#39;string&#39;</span>) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">try</span> {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        data <span class="op">=</span> <span class="bu">JSON</span><span class="op">.</span><span class="fu">parse</span>(data)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>      } <span class="cf">catch</span> (e) {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">/* Ignore error and return data as-is */</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>]</span></code></pre></div>
+<p>This behavior ensures that JSON responses are automatically converted
+into usable JavaScript objects without requiring manual deserialization
+on every request.</p>
+<h2 id="limitations-of-the-default-parser">Limitations of the Default
+Parser</h2>
+<p>Because Axios relies strictly on <code>JSON.parse()</code>, it
+inherits all the standard limitations of native JavaScript JSON
+handling:</p>
+<ul>
+<li><strong>Large Integers (BigInt):</strong> Long 64-bit integers
+(e.g., Twitter IDs, Snowflake IDs) exceed JavaScript's
+<code>Number.MAX_SAFE_INTEGER</code> and will lose precision during
+parsing.</li>
+<li><strong>Date Deserialization:</strong> Date strings formatted in ISO
+8601 remain plain strings and are not automatically converted into
+native <code>Date</code> instances.</li>
+</ul>
+<h2 id="customizing-the-default-json-parser">Customizing the Default
+JSON Parser</h2>
+<p>Developers can replace the default <code>JSON.parse()</code>
+implementation with specialized libraries (such as
+<code>lossless-json</code> or <code>json-bigint</code>) by overriding
+the <code>transformResponse</code> configuration globally or per
+request:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> JSONbig <span class="im">from</span> <span class="st">&#39;json-bigint&#39;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> client <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transformResponse</span><span class="op">:</span> [</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    (data) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>      <span class="cf">try</span> {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> JSONbig<span class="op">.</span><span class="fu">parse</span>(data)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>      } <span class="cf">catch</span> (err) {</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> data<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  ]</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Modifying <code>transformResponse</code> gives full control over how
+payloads are deserialized before reaching application logic.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

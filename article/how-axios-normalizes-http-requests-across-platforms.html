@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Normalizes HTTP Requests Across Platforms - axios</title>
+    <meta name="description" content="Axios is an isomorphic HTTP client that provides a consistent, identical API for making network requests in both Node.js runtimes and web browser environments. It achieves this cross-platform consistency by relying on an adapter-based architecture, a uni">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-normalizes-http-requests-across-platforms">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Normalizes HTTP Requests Across Platforms - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-normalizes-http-requests-across-platforms" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios is an isomorphic HTTP client that provides a consistent, identical API for making network requests in both Node.js runtimes and web browser environments. It achieves this cross-platform consistency by relying on an adapter-based architecture, a uni" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-normalizes-http-requests-across-platforms">How Axios
+Normalizes HTTP Requests Across Platforms</h1>
+<p>Axios is an isomorphic HTTP client that provides a consistent,
+identical API for making network requests in both Node.js runtimes and
+web browser environments. It achieves this cross-platform consistency by
+relying on an adapter-based architecture, a unified configuration
+schema, and standardized transformation pipelines. This article explains
+the underlying mechanisms Axios uses to normalize configurations, handle
+platform-specific transport layers, and ensure consistent request and
+response behavior regardless of the execution environment.</p>
+<h2 id="the-adapter-pattern">The Adapter Pattern</h2>
+<p>At the core of Axios's cross-platform functionality is the adapter
+design pattern. Instead of tying request logic directly to a specific
+networking API, Axios decouples configuration handling from
+execution:</p>
+<ul>
+<li><strong>Browser Environment:</strong> The default adapter uses the
+standard <code>XMLHttpRequest</code> object (or the <code>fetch</code>
+API in newer versions/configurations).</li>
+<li><strong>Node.js Environment:</strong> The default adapter uses
+Node's native <code>http</code> and <code>https</code> core
+modules.</li>
+</ul>
+<p>When a request is initiated, Axios evaluates the execution runtime,
+selects the appropriate adapter, and passes a standardized internal
+configuration object. The adapter is responsible for mapping this single
+configuration into the specific API calls required by the host
+environment.</p>
+<h2 id="unified-configuration-schema">Unified Configuration Schema</h2>
+<p>Axios accepts a single configuration object containing properties
+such as <code>url</code>, <code>method</code>, <code>headers</code>,
+<code>params</code>, <code>data</code>, <code>timeout</code>, and
+<code>auth</code>.</p>
+<p>Regardless of whether the request is executed via
+<code>XMLHttpRequest</code> or Node's <code>http.request</code>, Axios
+normalizes these options:</p>
+<ul>
+<li><strong>Query Parameters (<code>params</code>):</strong> Serialized
+consistently using standard URL encoding rules before appending them to
+the target URL.</li>
+<li><strong>Authentication (<code>auth</code>):</strong> Automatically
+computed into an <code>Authorization: Basic &lt;credentials&gt;</code>
+header for both environments.</li>
+<li><strong>Timeouts (<code>timeout</code>):</strong> Handled via the
+browser's <code>xhr.timeout</code> property or Node's
+<code>req.setTimeout()</code> socket management.</li>
+</ul>
+<h2 id="header-normalization">Header Normalization</h2>
+<p>HTTP headers are case-insensitive by specification, but different
+environments handle them differently. Axios manages headers using an
+internal <code>AxiosHeaders</code> class that:</p>
+<ol type="1">
+<li>Normalizes header names to lowercase for consistent lookups and
+manipulations.</li>
+<li>Automatically sets essential headers (such as
+<code>Content-Type: application/json</code> or
+<code>Content-Type: multipart/form-data</code>) based on the request
+payload type.</li>
+<li>Translates environment-specific header restrictions (such as
+managing <code>User-Agent</code> in Node versus allowing the browser to
+control restricted headers).</li>
+</ol>
+<h2 id="standardized-data-transformation">Standardized Data
+Transformation</h2>
+<p>Axios implements a bidirectional pipeline via
+<code>transformRequest</code> and <code>transformResponse</code>
+arrays.</p>
+<p>Before the request reaches the adapter:</p>
+<ul>
+<li>JavaScript objects are automatically serialized to JSON
+strings.</li>
+<li>Platform-specific payload types—such as <code>FormData</code>,
+<code>Blob</code>, and <code>ArrayBuffer</code> in browsers, or
+<code>Buffer</code> and <code>Stream</code> in Node.js—are inspected and
+prepared for the active transport layer.</li>
+</ul>
+<p>When the response returns:</p>
+<ul>
+<li>JSON response strings are parsed back into JavaScript objects across
+all platforms.</li>
+<li>Platform-specific streams or blobs are mapped to the user-requested
+<code>responseType</code> (e.g., <code>json</code>, <code>text</code>,
+<code>blob</code>, <code>arraybuffer</code>, or
+<code>stream</code>).</li>
+</ul>
+<h2 id="uniform-error-handling-and-cancellation">Uniform Error Handling
+and Cancellation</h2>
+<p>Axios normalizes errors across platforms by wrapping all network,
+timeout, and HTTP status failures into a consistent
+<code>AxiosError</code> object. This object provides uniform access to
+the request configuration, response status, headers, and underlying
+platform errors.</p>
+<p>Request cancellation is also standardized using the modern standard
+<code>AbortController</code> signal across both browser and Node.js
+environments, ensuring identical lifecycle management everywhere.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Protects Against CSRF Attacks - axios</title>
+    <meta name="description" content="Axios provides built-in mechanisms to defend against Cross-Site Request Forgery (CSRF/XSRF) attacks by automating the implementation of the Synchronizer Token Pattern. This article explains how Axios reads anti-CSRF tokens stored in cookies, automaticall">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-protects-against-csrf-attacks">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Protects Against CSRF Attacks - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-protects-against-csrf-attacks" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios provides built-in mechanisms to defend against Cross-Site Request Forgery (CSRF/XSRF) attacks by automating the implementation of the Synchronizer Token Pattern. This article explains how Axios reads anti-CSRF tokens stored in cookies, automaticall" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-protects-against-csrf-attacks">How Axios Protects
+Against CSRF Attacks</h1>
+<p>Axios provides built-in mechanisms to defend against Cross-Site
+Request Forgery (CSRF/XSRF) attacks by automating the implementation of
+the Synchronizer Token Pattern. This article explains how Axios reads
+anti-CSRF tokens stored in cookies, automatically attaches them as
+custom HTTP request headers, and provides configuration options to adapt
+to various backend frameworks.</p>
+<h2 id="the-default-csrf-protection-mechanism">The Default CSRF
+Protection Mechanism</h2>
+<p>Cross-Site Request Forgery occurs when a malicious website tricks a
+user's browser into executing unwanted actions on a trusted site where
+the user is currently authenticated. Browsers automatically attach
+cookies to cross-origin requests, allowing attackers to exploit existing
+sessions.</p>
+<p>To counter this, modern web applications use anti-CSRF tokens. Axios
+natively supports this pattern through a standardized two-step
+process:</p>
+<ol type="1">
+<li><strong>Reading the Cookie:</strong> On client-side requests, Axios
+automatically looks for a cookie named <code>XSRF-TOKEN</code>.</li>
+<li><strong>Setting the Header:</strong> If the cookie exists, Axios
+reads its value and appends it as an HTTP request header named
+<code>X-XSRF-TOKEN</code>.</li>
+</ol>
+<p>Because the browser's Same-Origin Policy prevents unauthorized
+third-party domains from reading cookies set by your application, a
+malicious site cannot read the token value to set the required header.
+When the backend receives the request, it compares the header value
+against the session or cookie value to verify authenticity.</p>
+<h2 id="customizing-token-and-header-names">Customizing Token and Header
+Names</h2>
+<p>Different backend frameworks (such as Django, Ruby on Rails, or
+Spring Boot) often use different naming conventions for CSRF cookies and
+headers. Axios allows you to customize these values using the
+<code>xsrfCookieName</code> and <code>xsrfHeaderName</code>
+properties.</p>
+<p>You can configure them globally:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">xsrfCookieName</span> <span class="op">=</span> <span class="st">&#39;csrftoken&#39;</span><span class="op">;</span> <span class="co">// Example for Django</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">xsrfHeaderName</span> <span class="op">=</span> <span class="st">&#39;X-CSRFToken&#39;</span><span class="op">;</span></span></code></pre></div>
+<p>Or within a specific Axios instance:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com&#39;</span><span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">xsrfCookieName</span><span class="op">:</span> <span class="st">&#39;_csrf&#39;</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">xsrfHeaderName</span><span class="op">:</span> <span class="st">&#39;X-CSRF-Token&#39;</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="cross-origin-request-handling">Cross-Origin Request
+Handling</h2>
+<p>By default, Axios only sends the XSRF header to requests sharing the
+same origin (protocol, domain, and port) as the client application. If
+your frontend and API are hosted on different domains, you must
+explicitly enable cross-origin credentials:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com&#39;</span><span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">withCredentials</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>When <code>withCredentials</code> is set to <code>true</code>, the
+browser sends cookies with cross-origin requests, allowing Axios to read
+and attach the necessary CSRF headers provided that Cross-Origin
+Resource Sharing (CORS) is properly configured on the server.</p>
+<h2 id="security-considerations-and-limitations">Security Considerations
+and Limitations</h2>
+<p>While Axios handles the client-side execution of CSRF token
+forwarding, robust protection depends on several backend
+configurations:</p>
+<ul>
+<li><strong>Cookie Security:</strong> The CSRF cookie must not be set to
+<code>HttpOnly</code>, as client-side JavaScript (and thus Axios) must
+be able to read it. However, the session/authentication cookie
+<em>must</em> remain <code>HttpOnly</code>.</li>
+<li><strong>Cookie Attributes:</strong> Set the
+<code>SameSite=Lax</code> or <code>SameSite=Strict</code> and
+<code>Secure</code> attributes on all cookies to provide an additional
+layer of defense directly at the browser level.</li>
+<li><strong>Server-Side Validation:</strong> Axios only transmits the
+token; the server must validate the incoming header against the expected
+value for every state-changing HTTP method (POST, PUT, PATCH,
+DELETE).</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

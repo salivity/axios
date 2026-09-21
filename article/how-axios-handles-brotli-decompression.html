@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Handles Brotli Decompression - axios</title>
+    <meta name="description" content="Axios provides built-in support for handling Brotli-encoded HTTP responses automatically, ensuring developers can consume compressed payloads without manually writing decompression logic. In Node.js environments, Axios leverages native decompression stre">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-handles-brotli-decompression">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Handles Brotli Decompression - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-handles-brotli-decompression" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios provides built-in support for handling Brotli-encoded HTTP responses automatically, ensuring developers can consume compressed payloads without manually writing decompression logic. In Node.js environments, Axios leverages native decompression stre" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-handles-brotli-decompression">How Axios Handles Brotli
+Decompression</h1>
+<p>Axios provides built-in support for handling Brotli-encoded HTTP
+responses automatically, ensuring developers can consume compressed
+payloads without manually writing decompression logic. In Node.js
+environments, Axios leverages native decompression streams to unpack
+<code>br</code>-encoded data, while in browser environments, it
+delegates decompression directly to the browser's underlying network
+stack. This article covers how Axios manages Brotli decompression across
+different runtime environments, how the default configuration works, and
+how to customize or disable the behavior.</p>
+<h2 id="brotli-decompression-in-nodejs">Brotli Decompression in
+Node.js</h2>
+<p>In a Node.js runtime, Axios relies on its standard HTTP adapter
+(<code>axios/lib/adapters/http.js</code>) to send requests and parse
+responses.</p>
+<p>When a request is initiated:</p>
+<ol type="1">
+<li><strong>Header Injection</strong>: By default, Axios includes
+<code>br</code> in the <code>Accept-Encoding</code> request header
+(typically <code>gzip, compress, deflate, br</code>), signaling to the
+server that the client supports Brotli compression.</li>
+<li><strong>Header Detection</strong>: When the server responds with the
+header <code>Content-Encoding: br</code>, Axios detects the encoding
+format.</li>
+<li><strong>Stream Decompression</strong>: Axios uses Node.js's built-in
+<code>zlib</code> module. If the response stream is Brotli-compressed,
+Axios pipes the incoming data through
+<code>zlib.createBrotliDecompress()</code>.</li>
+<li><strong>Data Transformation</strong>: The decompressed stream is
+then transformed based on the specified <code>responseType</code> (such
+as <code>json</code>, <code>text</code>, or <code>stream</code>) before
+resolving the response promise.</li>
+</ol>
+<p><em>Note: Native Brotli support in Node.js requires Node.js v11.7.0
+or higher, where <code>zlib.createBrotliDecompress</code> was
+introduced.</em></p>
+<h2 id="brotli-decompression-in-the-browser">Brotli Decompression in the
+Browser</h2>
+<p>In browser environments, Axios uses the <code>XMLHttpRequest</code>
+adapter (or the <code>fetch</code> adapter in newer configurations).</p>
+<ul>
+<li><strong>Native Handling</strong>: Browsers automatically manage HTTP
+compression. The browser network layer appends the
+<code>Accept-Encoding</code> header and transparently decompresses the
+<code>br</code> payload before passing the data to JavaScript.</li>
+<li><strong>Axios Role</strong>: Axios receives already-decompressed
+data directly from the browser API. No manual decoding or Node.js
+<code>zlib</code> polyfills are executed inside the browser bundle.</li>
+</ul>
+<h2 id="configuration-and-control">Configuration and Control</h2>
+<p>Axios provides the <code>decompress</code> configuration option to
+control automatic decompression behavior in Node.js.</p>
+<h3 id="default-behavior">Default Behavior</h3>
+<p>By default, <code>decompress</code> is set to <code>true</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://example.com/data&#39;</span><span class="op">,</span> {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">decompress</span><span class="op">:</span> <span class="kw">true</span> <span class="co">// Default behavior</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">then</span>(response <span class="kw">=&gt;</span> {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(response<span class="op">.</span><span class="at">data</span>)<span class="op">;</span> <span class="co">// Automatically decompressed</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="disabling-automatic-decompression">Disabling Automatic
+Decompression</h3>
+<p>If you need to receive the raw, compressed binary stream (for
+example, to pipe it directly to disk or forward it to another service
+without re-compressing), set <code>decompress</code> to
+<code>false</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://example.com/data&#39;</span><span class="op">,</span> {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">decompress</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">responseType</span><span class="op">:</span> <span class="st">&#39;arraybuffer&#39;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">then</span>(response <span class="kw">=&gt;</span> {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// response.data contains the raw Brotli-compressed bytes</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="common-considerations">Common Considerations</h2>
+<ul>
+<li><strong>Custom <code>Accept-Encoding</code> Headers</strong>: If you
+manually override the <code>Accept-Encoding</code> header in your
+request configuration without setting <code>decompress: false</code>,
+Axios will still attempt to decompress the response based on the
+returned <code>Content-Encoding</code> header.</li>
+<li><strong>Streaming Responses</strong>: When
+<code>responseType: 'stream'</code> is used in Node.js with
+<code>decompress: true</code>, Axios passes the decompressed stream
+rather than the raw compressed stream. To get the raw stream, set
+<code>decompress: false</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

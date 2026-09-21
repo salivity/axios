@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>axios.all vs Promise.all: Key Differences Explained - axios</title>
+    <meta name="description" content="When executing concurrent HTTP requests in JavaScript applications, developers frequently encounter both axios.all and the native Promise.all method. While both approaches serve the core purpose of handling multiple asynchronous requests simultaneously,">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-all-vs-promise-all-key-differences-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="axios.all vs Promise.all: Key Differences Explained - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-all-vs-promise-all-key-differences-explained" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When executing concurrent HTTP requests in JavaScript applications, developers frequently encounter both axios.all and the native Promise.all method. While both approaches serve the core purpose of handling multiple asynchronous requests simultaneously," />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axiosall-vs-promiseall-key-differences-explained">axios.all vs
+Promise.all: Key Differences Explained</h1>
+<p>When executing concurrent HTTP requests in JavaScript applications,
+developers frequently encounter both <code>axios.all</code> and the
+native <code>Promise.all</code> method. While both approaches serve the
+core purpose of handling multiple asynchronous requests simultaneously,
+modern JavaScript standards and recent Axios updates have changed how
+they should be used. This guide explains how <code>axios.all</code>
+compares to <code>Promise.all</code>, highlights their syntax
+differences, and demonstrates the current best practices for managing
+concurrent Axios requests.</p>
+<h2 id="under-the-hood-the-core-difference">Under the Hood: The Core
+Difference</h2>
+<p>Under the hood, there is virtually no functional difference between
+<code>axios.all</code> and <code>Promise.all</code>. In earlier versions
+of Axios, <code>axios.all</code> was simply a convenience wrapper that
+directly called the native <code>Promise.all</code> method:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">all</span> <span class="op">=</span> <span class="kw">function</span> (promises) {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="bu">Promise</span><span class="op">.</span><span class="fu">all</span>(promises)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<p>Because it was an alias rather than a custom implementation,
+<code>axios.all</code> inherited all behaviors of
+<code>Promise.all</code>, including its "fail-fast" nature—meaning if
+any single request rejects, the entire operation immediately rejects
+with that error.</p>
+<h2 id="the-role-of-axiosspread-vs-array-destructuring">The Role of
+<code>axios.spread</code> vs. Array Destructuring</h2>
+<p>Historically, <code>axios.all</code> was paired with a helper
+function called <code>axios.spread</code>. This helper allowed
+developers to split the resolved array of responses into separate
+arguments within the <code>.then()</code> callback.</p>
+<h3 id="legacy-syntax-axiosall--axiosspread">Legacy Syntax
+(<code>axios.all</code> + <code>axios.spread</code>)</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">all</span>([</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/users&#39;</span>)<span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/posts&#39;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">then</span>(axios<span class="op">.</span><span class="fu">spread</span>((usersResponse<span class="op">,</span> postsResponse) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(usersResponse<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(postsResponse<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>}))</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">catch</span>(error <span class="kw">=&gt;</span> {</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;One or more requests failed:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>With the introduction of ES6 array destructuring, the need for
+<code>axios.spread</code> was eliminated. Native JavaScript handles
+array unpacking cleanly without auxiliary library functions.</p>
+<h3 id="modern-syntax-promiseall--destructuring">Modern Syntax
+(<code>Promise.all</code> + Destructuring)</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">Promise</span><span class="op">.</span><span class="fu">all</span>([</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/users&#39;</span>)<span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/posts&#39;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">then</span>(([usersResponse<span class="op">,</span> postsResponse]) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(usersResponse<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(postsResponse<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">catch</span>(error <span class="kw">=&gt;</span> {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;One or more requests failed:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="modern-syntax-with-asyncawait">Modern Syntax with
+<code>async/await</code></h3>
+<p>Using <code>async/await</code> with <code>Promise.all</code> offers
+the cleanest and most readable pattern:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">fetchDashboardData</span>() {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">try</span> {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> [usersResponse<span class="op">,</span> postsResponse] <span class="op">=</span> <span class="cf">await</span> <span class="bu">Promise</span><span class="op">.</span><span class="fu">all</span>([</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>      axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/users&#39;</span>)<span class="op">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>      axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/posts&#39;</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    ])<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(usersResponse<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(postsResponse<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">catch</span> (error) {</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Failed to fetch data:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="deprecation-status">Deprecation Status</h2>
+<p>In modern versions of Axios (v0.27.0 and later, including v1.x+),
+<code>axios.all</code> and <code>axios.spread</code> have been
+deprecated in favor of native JavaScript features.</p>
+<p>Key reasons to use native methods instead of
+<code>axios.all</code>:</p>
+<ul>
+<li><strong>Zero Overhead:</strong> Native methods eliminate redundant
+library wrappers.</li>
+<li><strong>Standardization:</strong> <code>Promise.all</code> is
+universally understood across all JavaScript environments and
+promise-based libraries, not just Axios.</li>
+<li><strong>Future-Proofing:</strong> Deprecated methods may be
+completely removed in future major releases of Axios.</li>
+</ul>
+<h2 id="alternative-promiseallsettled">Alternative:
+<code>Promise.allSettled</code></h2>
+<p>When using <code>Promise.all</code>, if one request fails, none of
+the successful responses are returned in the <code>.then()</code> block.
+If you need all requests to complete regardless of whether some succeed
+or fail, use the native <code>Promise.allSettled</code> method:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> results <span class="op">=</span> <span class="cf">await</span> <span class="bu">Promise</span><span class="op">.</span><span class="fu">allSettled</span>([</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/users&#39;</span>)<span class="op">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/posts&#39;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>])<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>results<span class="op">.</span><span class="fu">forEach</span>((result) <span class="kw">=&gt;</span> {</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (result<span class="op">.</span><span class="at">status</span> <span class="op">===</span> <span class="st">&#39;fulfilled&#39;</span>) {</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Success:&#39;</span><span class="op">,</span> result<span class="op">.</span><span class="at">value</span><span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Failed:&#39;</span><span class="op">,</span> result<span class="op">.</span><span class="at">reason</span>)<span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="summary">Summary</h2>
+<p><code>axios.all</code> is simply an obsolete alias for
+<code>Promise.all</code>. For all new development and refactoring, use
+native <code>Promise.all</code> combined with ES6 destructuring or
+<code>async/await</code> to handle concurrent HTTP requests with
+Axios.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

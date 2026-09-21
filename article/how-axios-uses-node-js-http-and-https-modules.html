@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Uses Node.js HTTP and HTTPS Modules - axios</title>
+    <meta name="description" content="Axios is an isomorphic HTTP client that automatically adapts its transport layer depending on whether it is running in a web browser or a Node.js runtime. When executed in Node.js, Axios abstracts the runtime's native http and https modules to dispatch n">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-uses-node-js-http-and-https-modules">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Uses Node.js HTTP and HTTPS Modules - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-uses-node-js-http-and-https-modules" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios is an isomorphic HTTP client that automatically adapts its transport layer depending on whether it is running in a web browser or a Node.js runtime. When executed in Node.js, Axios abstracts the runtime's native http and https modules to dispatch n" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-uses-nodejs-http-and-https-modules">How Axios Uses
+Node.js HTTP and HTTPS Modules</h1>
+<p>Axios is an isomorphic HTTP client that automatically adapts its
+transport layer depending on whether it is running in a web browser or a
+Node.js runtime. When executed in Node.js, Axios abstracts the runtime's
+native <code>http</code> and <code>https</code> modules to dispatch
+network requests, handle streaming data, manage SSL configurations, and
+process responses. Understanding this interaction reveals how Axios
+bridges its promise-based API with Node.js's event-driven, stream-based
+networking core.</p>
+<h3 id="the-adapter-architecture">The Adapter Architecture</h3>
+<p>Axios implements an adapter design pattern to achieve platform
+independence. During initialization, Axios evaluates the execution
+environment. When it detects a Node.js runtime (traditionally by
+verifying the existence of the <code>process</code> global and lack of
+browser-specific globals like <code>XMLHttpRequest</code>), it selects
+its internal Node adapter (<code>axios/lib/adapters/http.js</code>).</p>
+<p>This adapter translates standard Axios request configurations into
+the options expected by the native <code>http</code> and
+<code>https</code> modules, delegating all actual network operations to
+Node.js.</p>
+<h3 id="protocol-detection-and-request-dispatch">Protocol Detection and
+Request Dispatch</h3>
+<p>When a request is initiated, the Node adapter parses the destination
+URL to determine the protocol:</p>
+<ol type="1">
+<li><strong>Protocol Routing:</strong> If the target URL uses
+<code>http:</code>, Axios routes the request through
+<code>http.request()</code>. If it uses <code>https:</code>, it invokes
+<code>https.request()</code>. Custom protocols or unsupported schemes
+trigger an immediate error.</li>
+<li><strong>Options Mapping:</strong> The adapter maps the Axios
+configuration object to native Node.js request options. Properties such
+as <code>headers</code>, <code>auth</code>, <code>timeout</code>,
+<code>proxy</code>, and path parameters are serialized and formatted to
+conform to Node's <code>RequestOptions</code> interface.</li>
+<li><strong>Dispatch:</strong> Axios calls the appropriate native
+function (<code>http.request</code> or <code>https.request</code>),
+which returns an instance of <code>http.ClientRequest</code>.</li>
+</ol>
+<h3 id="payload-handling-and-data-streaming">Payload Handling and Data
+Streaming</h3>
+<p>Node.js handles request and response bodies as streams. The Axios
+Node adapter manages the lifecycle of these streams:</p>
+<ul>
+<li><strong>Sending Request Data:</strong> If the request payload is a
+Buffer, string, or Stream, Axios writes it directly to the
+<code>ClientRequest</code> instance using <code>req.write()</code> and
+closes the stream with <code>req.end()</code>. If the payload is a plain
+JavaScript object, Axios automatically serializes it to a JSON string
+and sets the appropriate <code>Content-Type</code> header before
+transmission.</li>
+<li><strong>Receiving Response Data:</strong> When the remote server
+responds, the native module emits a <code>response</code> event,
+providing an instance of <code>http.IncomingMessage</code>. Because
+<code>IncomingMessage</code> is a readable stream, Axios can handle the
+data efficiently.</li>
+<li><strong>Response Transformations:</strong> Based on the user-defined
+<code>responseType</code> (such as <code>json</code>, <code>text</code>,
+or <code>stream</code>), Axios either passes the raw
+<code>IncomingMessage</code> stream directly to the application or
+buffers the stream data chunks into memory to parse them into strings or
+JSON objects before resolving the Promise.</li>
+</ul>
+<h3 id="connection-management-and-custom-agents">Connection Management
+and Custom Agents</h3>
+<p>The native <code>http</code> and <code>https</code> modules rely on
+<code>http.Agent</code> and <code>https.Agent</code> to manage
+connection persistence (HTTP Keep-Alive), socket pooling, and TLS
+handshakes.</p>
+<p>Axios allows developers to pass custom <code>httpAgent</code> and
+<code>httpsAgent</code> instances directly through its configuration.
+When provided, the adapter forwards these agents to the native request
+options. This mechanism enables fine-grained control over:</p>
+<ul>
+<li>Connection reuse and maximum socket limits.</li>
+<li>Custom SSL/TLS settings, including custom Certificate Authorities
+(CA), client certificates, and <code>rejectUnauthorized</code>
+flags.</li>
+<li>Custom proxy configurations via third-party agents like
+<code>https-proxy-agent</code> or <code>socks-proxy-agent</code>.</li>
+</ul>
+<h3 id="timeouts-cancellation-and-error-handling">Timeouts,
+Cancellation, and Error Handling</h3>
+<p>The Node adapter translates native networking events into JavaScript
+Promises:</p>
+<ul>
+<li><strong>Completion:</strong> Once the response stream ends without
+error, Axios resolves the Promise with a structured response object
+containing status codes, headers, and the parsed body.</li>
+<li><strong>Errors:</strong> The adapter attaches listeners to the
+<code>error</code> event on the <code>ClientRequest</code> instance.
+Network failures, DNS resolution errors, and socket hang-ups reject the
+Axios promise with normalized error objects.</li>
+<li><strong>Timeouts and Cancellation:</strong> Native socket timeouts
+configured via <code>req.setTimeout()</code> or manual cancellations via
+<code>AbortController</code> cause Axios to invoke
+<code>req.destroy()</code>, terminating the underlying socket connection
+immediately and rejecting the pending Promise.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

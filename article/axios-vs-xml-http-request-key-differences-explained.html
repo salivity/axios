@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios vs XMLHttpRequest: Key Differences Explained - axios</title>
+    <meta name="description" content="Axios and the XMLHttpRequest (XHR) object are both tools used to execute HTTP requests in JavaScript, but they represent different generations of web development. While XMLHttpRequest is a legacy, browser-native API based on event handlers, Axios is a mo">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-vs-xml-http-request-key-differences-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios vs XMLHttpRequest: Key Differences Explained - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-vs-xml-http-request-key-differences-explained" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios and the XMLHttpRequest (XHR) object are both tools used to execute HTTP requests in JavaScript, but they represent different generations of web development. While XMLHttpRequest is a legacy, browser-native API based on event handlers, Axios is a mo" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-vs-xmlhttprequest-key-differences-explained">Axios vs
+XMLHttpRequest: Key Differences Explained</h1>
+<p>Axios and the <code>XMLHttpRequest</code> (XHR) object are both tools
+used to execute HTTP requests in JavaScript, but they represent
+different generations of web development. While
+<code>XMLHttpRequest</code> is a legacy, browser-native API based on
+event handlers, Axios is a modern, third-party library built on
+JavaScript Promises. Understanding the primary differences between
+them—such as syntax, automatic data handling, interceptors, and
+environment support—helps developers determine which solution best suits
+their application's architecture.</p>
+<h3 id="1-promise-support-and-syntax">1. Promise Support and Syntax</h3>
+<ul>
+<li><strong>Axios:</strong> Built natively on JavaScript Promises,
+allowing clean integration with modern <code>async/await</code> syntax
+and <code>.then()</code>/<code>.catch()</code> chains. This eliminates
+callback nesting and makes asynchronous code easier to read and
+maintain.</li>
+<li><strong>XMLHttpRequest:</strong> Relies on an event-driven callback
+model. Developers must manually attach event listeners (such as
+<code>onload</code>, <code>onerror</code>, or
+<code>onreadystatechange</code>) to monitor the lifecycle and completion
+of a request.</li>
+</ul>
+<h3 id="2-automatic-data-transformation">2. Automatic Data
+Transformation</h3>
+<ul>
+<li><strong>Axios:</strong> Automatically serializes JavaScript objects
+into JSON when sending request bodies and automatically parses incoming
+JSON responses into JavaScript objects.</li>
+<li><strong>XMLHttpRequest:</strong> Requires manual serialization using
+<code>JSON.stringify()</code> before sending data and manual
+deserialization using <code>JSON.parse()</code> on the
+<code>responseText</code> after receiving the response.</li>
+</ul>
+<h3 id="3-error-handling-and-http-status-codes">3. Error Handling and
+HTTP Status Codes</h3>
+<ul>
+<li><strong>Axios:</strong> Automatically rejects the Promise if the
+server responds with a status code outside the 2xx range (such as 404 or
+500). This allows centralized error handling within standard
+<code>catch</code> blocks.</li>
+<li><strong>XMLHttpRequest:</strong> Considers any completed network
+transaction a success, even if the status code is 404 or 500. Developers
+must manually inspect <code>xhr.status</code> inside the
+<code>onload</code> handler to detect HTTP errors.</li>
+</ul>
+<h3 id="4-interceptors-and-middleware">4. Interceptors and
+Middleware</h3>
+<ul>
+<li><strong>Axios:</strong> Provides built-in request and response
+interceptors. This feature enables developers to modify requests before
+they are sent (e.g., injecting authentication headers) or transform
+responses before they reach application logic.</li>
+<li><strong>XMLHttpRequest:</strong> Does not have a native interceptor
+mechanism. Implementing global behaviors requires overriding prototype
+methods or writing custom wrapper functions around the XHR object.</li>
+</ul>
+<h3 id="5-environment-compatibility">5. Environment Compatibility</h3>
+<ul>
+<li><strong>Axios:</strong> Isomorphic/Universal, meaning it runs in
+both web browsers and Node.js environments. In the browser, it uses XHR
+or Fetch under the hood; in Node.js, it uses the native
+<code>http</code> and <code>https</code> modules.</li>
+<li><strong>XMLHttpRequest:</strong> A browser-specific API. It is not
+natively available in Node.js without third-party polyfills or
+packages.</li>
+</ul>
+<h3 id="6-request-cancellation">6. Request Cancellation</h3>
+<ul>
+<li><strong>Axios:</strong> Supports request cancellation using modern
+<code>AbortController</code> signals, allowing developers to cancel
+in-flight HTTP requests easily.</li>
+<li><strong>XMLHttpRequest:</strong> Supports cancellation directly via
+the built-in <code>xhr.abort()</code> method, but managing cancellation
+across multiple concurrent requests requires custom tracking logic.</li>
+</ul>
+<h3 id="7-built-in-csrf-protection">7. Built-in CSRF Protection</h3>
+<ul>
+<li><strong>Axios:</strong> Features native client-side cross-site
+request forgery (CSRF/XSRF) protection by automatically reading
+designated anti-CSRF cookies and attaching them to request headers.</li>
+<li><strong>XMLHttpRequest:</strong> Provides no built-in CSRF
+mechanisms; developers must manually extract cookies and append the
+corresponding headers to each request.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

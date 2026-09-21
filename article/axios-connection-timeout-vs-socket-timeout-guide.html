@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Connection Timeout vs Socket Timeout Guide - axios</title>
+    <meta name="description" content="Managing network timeouts properly is essential for building resilient applications, preventing hung processes, and handling slow or unresponsive upstream services. In network communication, a connection timeout and a socket (read) timeout represent two">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-connection-timeout-vs-socket-timeout-guide">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Connection Timeout vs Socket Timeout Guide - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-connection-timeout-vs-socket-timeout-guide" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Managing network timeouts properly is essential for building resilient applications, preventing hung processes, and handling slow or unresponsive upstream services. In network communication, a connection timeout and a socket (read) timeout represent two" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-connection-timeout-vs-socket-timeout-guide">Axios
+Connection Timeout vs Socket Timeout Guide</h1>
+<p>Managing network timeouts properly is essential for building
+resilient applications, preventing hung processes, and handling slow or
+unresponsive upstream services. In network communication, a connection
+timeout and a socket (read) timeout represent two distinct phases of an
+HTTP request. This guide explains the differences between connection
+timeouts and socket timeouts and demonstrates how to configure both when
+using Axios in Node.js.</p>
+<h2
+id="understanding-connection-timeout-vs-socket-timeout">Understanding
+Connection Timeout vs. Socket Timeout</h2>
+<p>Before configuring Axios, it is important to distinguish how these
+two timeouts function:</p>
+<ul>
+<li><strong>Connection Timeout:</strong> The maximum time allowed to
+establish the initial TCP handshake (and TLS negotiation for HTTPS) with
+the destination server. If the server does not respond within this
+window, the connection attempt is aborted.</li>
+<li><strong>Socket Timeout (Read/Inactivity Timeout):</strong> The
+maximum period of inactivity between two consecutive data packets after
+the connection has been established. If the connection is established
+but the server pauses or stops sending data mid-stream, the socket
+timeout triggers.</li>
+</ul>
+<p>By default, the standard <code>timeout</code> property in Axios
+(<code>axios.create({ timeout: 5000 })</code>) applies to the
+<strong>entire request lifecycle</strong>—from the initial request
+dispatch until the response data is fully received. It does not natively
+separate connection establishment from socket read inactivity.</p>
+<h2 id="configuring-socket-timeout-with-httphttps-agents">Configuring
+Socket Timeout with HTTP/HTTPS Agents</h2>
+<p>In Node.js, Axios relies on the native <code>http</code> and
+<code>https</code> modules. You can configure socket-level timeouts by
+passing custom <code>http.Agent</code> and <code>https.Agent</code>
+instances to Axios.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> http <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;http&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> https <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;https&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Create custom agents with socket inactivity timeouts</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpAgent <span class="op">=</span> <span class="kw">new</span> http<span class="op">.</span><span class="fu">Agent</span>({</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">keepAlive</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">10000</span> <span class="co">// Socket timeout in milliseconds (10 seconds)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpsAgent <span class="op">=</span> <span class="kw">new</span> https<span class="op">.</span><span class="fu">Agent</span>({</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">keepAlive</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">10000</span> <span class="co">// Socket timeout in milliseconds (10 seconds)</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> client <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  httpAgent<span class="op">,</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  httpsAgent</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>When configured this way, the underlying TCP socket will emit a
+<code>timeout</code> event if no data is transmitted across the socket
+for 10 seconds.</p>
+<h2 id="configuring-a-dedicated-connection-timeout">Configuring a
+Dedicated Connection Timeout</h2>
+<p>Because Node.js and Axios do not provide a dedicated
+<code>connectionTimeout</code> configuration property out of the box,
+you can implement one by intercepting the request's socket creation and
+applying a timer that clears once the socket connects.</p>
+<h3 id="using-request-hooks-and-socket-events">Using Request Hooks and
+Socket Events</h3>
+<p>You can listen for the <code>socket</code> event on the underlying
+<code>http.ClientRequest</code> to enforce a strict connection
+deadline:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> http <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;http&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> https <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;https&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">makeRequestWithCustomTimeouts</span>(url<span class="op">,</span> options <span class="op">=</span> {}) {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    connectionTimeout <span class="op">=</span> <span class="dv">3000</span><span class="op">,</span> <span class="co">// 3 seconds to connect</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    socketTimeout <span class="op">=</span> <span class="dv">5000</span><span class="op">,</span>     <span class="co">// 5 seconds between data packets</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span>axiosConfig</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  } <span class="op">=</span> options<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> httpAgent <span class="op">=</span> <span class="kw">new</span> http<span class="op">.</span><span class="fu">Agent</span>({ <span class="dt">keepAlive</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span> <span class="dt">timeout</span><span class="op">:</span> socketTimeout })<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> httpsAgent <span class="op">=</span> <span class="kw">new</span> https<span class="op">.</span><span class="fu">Agent</span>({ <span class="dt">keepAlive</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span> <span class="dt">timeout</span><span class="op">:</span> socketTimeout })<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> instance <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    httpAgent<span class="op">,</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    httpsAgent<span class="op">,</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span>axiosConfig</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Intercept request to monitor socket connection state</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  instance<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">request</span><span class="op">.</span><span class="fu">use</span>((config) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    config<span class="op">.</span><span class="at">transformRequest</span> <span class="op">=</span> [</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>      (data<span class="op">,</span> headers) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> data<span class="op">;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    ]<span class="op">;</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> config<span class="op">;</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> instance<span class="op">.</span><span class="fu">get</span>(url<span class="op">,</span> {</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="dt">transport</span><span class="op">:</span> {</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>      <span class="dt">request</span><span class="op">:</span> (options<span class="op">,</span> callback) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> req <span class="op">=</span> (options<span class="op">.</span><span class="at">protocol</span> <span class="op">===</span> <span class="st">&#39;https:&#39;</span> <span class="op">?</span> https <span class="op">:</span> http)<span class="op">.</span><span class="fu">request</span>(options<span class="op">,</span> callback)<span class="op">;</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> connectionTimer <span class="op">=</span> <span class="pp">setTimeout</span>(() <span class="kw">=&gt;</span> {</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>          req<span class="op">.</span><span class="fu">destroy</span>(<span class="kw">new</span> <span class="bu">Error</span>(<span class="vs">`Connection timeout: Exceeded </span><span class="sc">${</span>connectionTimeout<span class="sc">}</span><span class="vs">ms during connection phase`</span>))<span class="op">;</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span> connectionTimeout)<span class="op">;</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>        req<span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;socket&#39;</span><span class="op">,</span> (socket) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>          <span class="co">// Check if socket is already connected (e.g., reused via keepAlive)</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>          <span class="cf">if</span> (socket<span class="op">.</span><span class="at">connecting</span>) {</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>            socket<span class="op">.</span><span class="fu">once</span>(<span class="st">&#39;connect&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>              <span class="pp">clearTimeout</span>(connectionTimer)<span class="op">;</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>            })<span class="op">;</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>            socket<span class="op">.</span><span class="fu">once</span>(<span class="st">&#39;secureConnect&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>              <span class="pp">clearTimeout</span>(connectionTimer)<span class="op">;</span></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>            })<span class="op">;</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>          } <span class="cf">else</span> {</span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>            <span class="pp">clearTimeout</span>(connectionTimer)<span class="op">;</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>          }</span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>          <span class="co">// Handle socket inactivity</span></span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>          socket<span class="op">.</span><span class="fu">setTimeout</span>(socketTimeout<span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>            req<span class="op">.</span><span class="fu">destroy</span>(<span class="kw">new</span> <span class="bu">Error</span>(<span class="vs">`Socket timeout: Inactivity exceeded </span><span class="sc">${</span>socketTimeout<span class="sc">}</span><span class="vs">ms`</span>))<span class="op">;</span></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>          })<span class="op">;</span></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>        })<span class="op">;</span></span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> req<span class="op">;</span></span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> response<span class="op">;</span></span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="using-abortcontroller-for-connection-timeouts">Using
+AbortController for Connection Timeouts</h2>
+<p>For a lightweight implementation without modifying underlying
+transport layers, you can use <code>AbortController</code> to handle the
+total connection phase independently:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> http <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;http&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> https <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;https&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">fetchWithTimeouts</span>(url) {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> controller <span class="op">=</span> <span class="kw">new</span> <span class="fu">AbortController</span>()<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> connectionTimeoutMs <span class="op">=</span> <span class="dv">3000</span><span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> socketTimeoutMs <span class="op">=</span> <span class="dv">7000</span><span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> httpAgent <span class="op">=</span> <span class="kw">new</span> http<span class="op">.</span><span class="fu">Agent</span>({ <span class="dt">timeout</span><span class="op">:</span> socketTimeoutMs })<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> httpsAgent <span class="op">=</span> <span class="kw">new</span> https<span class="op">.</span><span class="fu">Agent</span>({ <span class="dt">timeout</span><span class="op">:</span> socketTimeoutMs })<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> timeoutId <span class="op">=</span> <span class="pp">setTimeout</span>(() <span class="kw">=&gt;</span> {</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    controller<span class="op">.</span><span class="fu">abort</span>(<span class="kw">new</span> <span class="bu">Error</span>(<span class="vs">`Connection timed out after </span><span class="sc">${</span>connectionTimeoutMs<span class="sc">}</span><span class="vs">ms`</span>))<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span> connectionTimeoutMs)<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">try</span> {</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">get</span>(url<span class="op">,</span> {</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>      <span class="dt">signal</span><span class="op">:</span> controller<span class="op">.</span><span class="at">signal</span><span class="op">,</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>      httpAgent<span class="op">,</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>      httpsAgent<span class="op">,</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>      <span class="dt">onDownloadProgress</span><span class="op">:</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Clear the connection timeout once data starts streaming</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        <span class="pp">clearTimeout</span>(timeoutId)<span class="op">;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="pp">clearTimeout</span>(timeoutId)<span class="op">;</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> response<span class="op">.</span><span class="at">data</span><span class="op">;</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">catch</span> (error) {</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    <span class="pp">clearTimeout</span>(timeoutId)<span class="op">;</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">throw</span> error<span class="op">;</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="summary-of-configuration-methods">Summary of Configuration
+Methods</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Timeout Type</th>
+<th style="text-align: left;">Mechanism in Node.js / Axios</th>
+<th style="text-align: left;">Target Failure Mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Total Request
+Timeout</strong></td>
+<td style="text-align: left;">Axios <code>timeout</code> option</td>
+<td style="text-align: left;">Entire request/response takes too
+long.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Socket Timeout</strong></td>
+<td style="text-align: left;"><code>http.Agent({ timeout })</code> or
+<code>socket.setTimeout()</code></td>
+<td style="text-align: left;">Data flow stops or hangs after
+connecting.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Connection Timeout</strong></td>
+<td style="text-align: left;">Socket connection listeners or
+<code>AbortController</code></td>
+<td style="text-align: left;">Server is unreachable, dropping SYN
+packets, or failing TLS negotiation.</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

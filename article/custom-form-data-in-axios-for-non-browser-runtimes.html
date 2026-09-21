@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom FormData in Axios for Non-Browser Runtimes - axios</title>
+    <meta name="description" content="This guide explains how to configure and use custom FormData polyfills with the Axios HTTP client across non-browser environments such as Node.js, serverless functions, and edge runtimes. You will learn how to resolve multipart/form-data transmission iss">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/custom-form-data-in-axios-for-non-browser-runtimes">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Custom FormData in Axios for Non-Browser Runtimes - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/custom-form-data-in-axios-for-non-browser-runtimes" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to configure and use custom FormData polyfills with the Axios HTTP client across non-browser environments such as Node.js, serverless functions, and edge runtimes. You will learn how to resolve multipart/form-data transmission iss" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="custom-formdata-in-axios-for-non-browser-runtimes">Custom
+FormData in Axios for Non-Browser Runtimes</h1>
+<p>This guide explains how to configure and use custom FormData
+polyfills with the Axios HTTP client across non-browser environments
+such as Node.js, serverless functions, and edge runtimes. You will learn
+how to resolve multipart/form-data transmission issues, integrate
+packages like <code>form-data</code> or <code>formdata-node</code>, and
+configure Axios instance settings to handle custom payload
+serializations seamlessly.</p>
+<h2 id="why-axios-requires-a-polyfill-in-non-browser-environments">Why
+Axios Requires a Polyfill in Non-Browser Environments</h2>
+<p>In standard browser environments, the <code>FormData</code> interface
+is built into the <code>window</code> global scope. Non-browser runtimes
+like Node.js (prior to version 18 or in environments with stripped
+global web APIs) lack a native implementation of the standard
+<code>FormData</code> API. When handling file uploads or multipart
+payloads, Axios requires a compliant <code>FormData</code> class to
+build the payload and calculate appropriate boundary headers.</p>
+<h2 id="choosing-a-polyfill">Choosing a Polyfill</h2>
+<p>Depending on your target runtime and standards compliance
+requirements, choose one of the following packages:</p>
+<ul>
+<li><strong><code>form-data</code></strong>: A widely used,
+Node-specific library with its own stream-based API.</li>
+<li><strong><code>formdata-node</code></strong>: A spec-compliant
+implementation of the Web API <code>FormData</code> standard.</li>
+</ul>
+<p>Install your chosen package via your package manager:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install form-data</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># or for the spec-compliant version:</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install formdata-node</span></code></pre></div>
+<h2 id="configuring-axios-with-custom-formdata">Configuring Axios with
+Custom FormData</h2>
+<p>Axios (v1.x and newer) supports configuring custom environment
+adapters and classes directly via the <code>env</code> configuration
+object or by supplying the polyfill instance directly to the
+request.</p>
+<h3 id="method-1-configuring-an-axios-instance-globally">Method 1:
+Configuring an Axios Instance Globally</h3>
+<p>You can define a custom <code>FormData</code> constructor inside an
+Axios instance using the <code>env.FormData</code> config option:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="bu">FormData</span> <span class="im">from</span> <span class="st">&#39;form-data&#39;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com&#39;</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">env</span><span class="op">:</span> {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">FormData</span><span class="op">:</span> <span class="bu">FormData</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="im">default</span> apiClient<span class="op">;</span></span></code></pre></div>
+<p>With this configuration, any plain object passed with file buffers or
+streams that Axios serializes internally into <code>FormData</code> will
+utilize your provided constructor.</p>
+<h3 id="method-2-supplying-the-polyfilled-instance-directly">Method 2:
+Supplying the Polyfilled Instance Directly</h3>
+<p>When using <code>form-data</code> (the Node-specific library),
+instantiate the form manually and attach streams or buffers. You must
+also supply the headers generated by the library to ensure boundary
+delimiters are set correctly:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="bu">FormData</span> <span class="im">from</span> <span class="st">&#39;form-data&#39;</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> fs <span class="im">from</span> <span class="st">&#39;fs&#39;</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">uploadFile</span>() {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> form <span class="op">=</span> <span class="kw">new</span> <span class="bu">FormData</span>()<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  form<span class="op">.</span><span class="fu">append</span>(<span class="st">&#39;username&#39;</span><span class="op">,</span> <span class="st">&#39;john_doe&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  form<span class="op">.</span><span class="fu">append</span>(<span class="st">&#39;file&#39;</span><span class="op">,</span> fs<span class="op">.</span><span class="fu">createReadStream</span>(<span class="st">&#39;./document.pdf&#39;</span>))<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;https://api.example.com/upload&#39;</span><span class="op">,</span> form<span class="op">,</span> {</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>      <span class="op">...</span>form<span class="op">.</span><span class="fu">getHeaders</span>()</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> response<span class="op">.</span><span class="at">data</span><span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="method-3-using-a-spec-compliant-polyfill-formdata-node">Method
+3: Using a Spec-Compliant Polyfill (<code>formdata-node</code>)</h3>
+<p>If you are using <code>formdata-node</code>, it behaves identically
+to browser <code>FormData</code>. When using Axios v1.x, Axios
+automatically serializes the boundary and headers when you pass a
+standard-compliant <code>FormData</code> instance:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { <span class="bu">FormData</span><span class="op">,</span> <span class="bu">File</span> } <span class="im">from</span> <span class="st">&#39;formdata-node&#39;</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { readFile } <span class="im">from</span> <span class="st">&#39;fs/promises&#39;</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">uploadSpecCompliant</span>() {</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> form <span class="op">=</span> <span class="kw">new</span> <span class="bu">FormData</span>()<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> fileBuffer <span class="op">=</span> <span class="cf">await</span> <span class="fu">readFile</span>(<span class="st">&#39;./document.pdf&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> file <span class="op">=</span> <span class="kw">new</span> <span class="bu">File</span>([fileBuffer]<span class="op">,</span> <span class="st">&#39;document.pdf&#39;</span><span class="op">,</span> { <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;application/pdf&#39;</span> })<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  form<span class="op">.</span><span class="fu">set</span>(<span class="st">&#39;file&#39;</span><span class="op">,</span> file)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  form<span class="op">.</span><span class="fu">set</span>(<span class="st">&#39;description&#39;</span><span class="op">,</span> <span class="st">&#39;User uploaded PDF&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;https://api.example.com/upload&#39;</span><span class="op">,</span> form)<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> response<span class="op">.</span><span class="at">data</span><span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="troubleshooting-common-boundary-errors">Troubleshooting Common
+Boundary Errors</h2>
+<p>When sending <code>multipart/form-data</code> without configuring
+headers properly, servers may return <code>400 Bad Request</code> or
+fail to parse files due to a missing <code>boundary</code> parameter in
+the <code>Content-Type</code> header.</p>
+<ul>
+<li><strong>Avoid hardcoding
+<code>Content-Type: multipart/form-data</code></strong>: Hardcoding this
+string strips the required dynamic boundary parameter.</li>
+<li><strong>Use <code>form.getHeaders()</code> for Node
+<code>form-data</code></strong>: Always merge
+<code>form.getHeaders()</code> into the Axios <code>headers</code>
+object when using the legacy <code>form-data</code> package.</li>
+<li><strong>Let Axios manage headers for standard polyfills</strong>:
+When using spec-compliant polyfills like <code>formdata-node</code> with
+Axios v1.x, omit the <code>Content-Type</code> header so Axios can
+automatically generate the correct boundary.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

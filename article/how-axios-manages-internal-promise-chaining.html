@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Manages Internal Promise Chaining - axios</title>
+    <meta name="description" content="Axios handles HTTP requests and responses through an internal Promise-based execution pipeline built on a dynamic chain array. By orchestrating request interceptors, a central transport adapter, and response interceptors into a single continuous Promise">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-manages-internal-promise-chaining">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Manages Internal Promise Chaining - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-manages-internal-promise-chaining" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios handles HTTP requests and responses through an internal Promise-based execution pipeline built on a dynamic chain array. By orchestrating request interceptors, a central transport adapter, and response interceptors into a single continuous Promise" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-manages-internal-promise-chaining">How Axios Manages
+Internal Promise Chaining</h1>
+<p>Axios handles HTTP requests and responses through an internal
+Promise-based execution pipeline built on a dynamic chain array. By
+orchestrating request interceptors, a central transport adapter, and
+response interceptors into a single continuous Promise chain, Axios
+ensures that data transformation, asynchronous operations, and error
+handling flow sequentially through every step of the request
+lifecycle.</p>
+<h3 id="the-interceptor-and-dispatch-pipeline">The Interceptor and
+Dispatch Pipeline</h3>
+<p>At the core of Axios's request mechanism is the
+<code>Axios.prototype.request</code> method. Historically and
+architecturally, Axios models its lifecycle around an internal array
+often referred to as the <code>chain</code>.</p>
+<p>When a request is initiated, Axios initializes this pipeline with the
+central dispatch handler:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> chain <span class="op">=</span> [dispatchRequest<span class="op">,</span> <span class="kw">undefined</span>]<span class="op">;</span></span></code></pre></div>
+<p>Here, <code>dispatchRequest</code> is the internal function
+responsible for invoking the underlying transport adapter (such as
+<code>XMLHttpRequest</code> in the browser or the <code>http</code>
+module in Node.js). The <code>undefined</code> acts as the corresponding
+rejection handler for the initial adapter invocation.</p>
+<h3 id="registering-and-ordering-interceptors">Registering and Ordering
+Interceptors</h3>
+<p>Axios allows developers to register request and response interceptors
+via <code>axios.interceptors.request.use()</code> and
+<code>axios.interceptors.response.use()</code>. Each interceptor
+consists of a fulfillment handler and a rejection handler.</p>
+<p>To maintain the correct execution sequence, Axios pushes these
+handlers into the <code>chain</code> array using different array
+methods:</p>
+<ol type="1">
+<li><strong>Request Interceptors:</strong> Added to the front of the
+array using <code>Array.prototype.unshift</code>. This ensures that the
+most recently registered request interceptor executes first, processing
+configuration objects sequentially before reaching the dispatch
+adapter.</li>
+<li><strong>Response Interceptors:</strong> Appended to the end of the
+array using <code>Array.prototype.push</code>. This ensures response
+interceptors execute in the order they were registered, processing the
+returned response data after the adapter completes.</li>
+</ol>
+<p>The resulting structure forms a symmetrical queue:</p>
+<p><code>[Request Interceptors] -&gt; [dispatchRequest, undefined] -&gt; [Response Interceptors]</code></p>
+<h3 id="constructing-the-promise-chain">Constructing the Promise
+Chain</h3>
+<p>Once the <code>chain</code> array is populated, Axios initializes a
+resolved Promise holding the request configuration:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> promise <span class="op">=</span> <span class="bu">Promise</span><span class="op">.</span><span class="fu">resolve</span>(config)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> (chain<span class="op">.</span><span class="at">length</span>) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  promise <span class="op">=</span> promise<span class="op">.</span><span class="fu">then</span>(chain<span class="op">.</span><span class="fu">shift</span>()<span class="op">,</span> chain<span class="op">.</span><span class="fu">shift</span>())<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">return</span> promise<span class="op">;</span></span></code></pre></div>
+<p>By shifting pairs of functions (<code>onFulfilled</code> and
+<code>onRejected</code>) from the array and attaching them via
+<code>.then()</code>, Axios constructs a linked Promise pipeline. The
+output of one step becomes the input to the next.</p>
+<h3 id="synchronous-vs-asynchronous-interceptor-execution">Synchronous
+vs. Asynchronous Interceptor Execution</h3>
+<p>In newer versions of Axios, the engine includes an optimization for
+synchronous request interceptors. If all request interceptors are marked
+with <code>synchronous: true</code>, Axios iterates through them
+synchronously rather than wrapping each in an asynchronous Promise
+tick.</p>
+<p>If any interceptor returns a Promise or does not specify the
+synchronous flag, Axios falls back to assembling the asynchronous
+Promise chain. This optimization reduces microtask scheduling overhead
+in high-throughput environments while preserving standard async
+capabilities when needed.</p>
+<h3 id="transport-dispatch-and-error-propagation">Transport Dispatch and
+Error Propagation</h3>
+<p>When the execution reaches <code>dispatchRequest</code>, the
+configured adapter executes the network call and returns a Promise:</p>
+<ul>
+<li><strong>Fulfillment:</strong> If the network request succeeds and
+matches valid HTTP status codes, the adapter resolves with the
+normalized response object, passing it forward to the response
+interceptors.</li>
+<li><strong>Rejection:</strong> If a network failure occurs or the
+server returns a status outside the valid range, the adapter rejects the
+Promise with an <code>AxiosError</code>.</li>
+</ul>
+<p>Because native Promise chaining guarantees error propagation, a
+rejection at any stage—whether inside a request interceptor, the
+transport adapter, or a response interceptor—bypasses subsequent
+fulfillment handlers and moves directly to the nearest
+<code>onRejected</code> handler or the consumer's final
+<code>.catch()</code> block.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

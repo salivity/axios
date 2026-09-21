@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Base URL Resolution Works - axios</title>
+    <meta name="description" content="This article provides an overview of how the Axios HTTP client automatically resolves base URLs. It covers the configuration of the baseURL property, the internal mechanism Axios uses to combine relative paths, how absolute URLs bypass the base URL, and">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-base-url-resolution-works">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Base URL Resolution Works - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-base-url-resolution-works" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of how the Axios HTTP client automatically resolves base URLs. It covers the configuration of the baseURL property, the internal mechanism Axios uses to combine relative paths, how absolute URLs bypass the base URL, and" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-base-url-resolution-works">How Axios Base URL
+Resolution Works</h1>
+<p>This article provides an overview of how the Axios HTTP client
+automatically resolves base URLs. It covers the configuration of the
+<code>baseURL</code> property, the internal mechanism Axios uses to
+combine relative paths, how absolute URLs bypass the base URL, and best
+practices for configuring base URLs in instances.</p>
+<h2 id="the-baseurl-configuration-property">The <code>baseURL</code>
+Configuration Property</h2>
+<p>In Axios, you can define a <code>baseURL</code> option globally or on
+a custom instance. When specified, Axios automatically prepends this URL
+to any relative URL passed to request methods (such as
+<code>axios.get('/users')</code>).</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> api <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com/v1&#39;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Sends request to https://api.example.com/v1/users</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>api<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/users&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<h2 id="how-path-combination-works">How Path Combination Works</h2>
+<p>Axios handles URL resolution using an internal utility function often
+referred to as <code>buildFullPath</code>. This function determines how
+the <code>baseURL</code> and the requested <code>url</code> are joined
+together:</p>
+<ol type="1">
+<li><strong>Relative Paths</strong>: If the <code>url</code> provided to
+a request method is a relative path (e.g., <code>users</code> or
+<code>/users</code>), Axios combines it with <code>baseURL</code>.</li>
+<li><strong>Slash Normalization</strong>: Axios handles overlapping or
+missing slashes automatically.
+<ul>
+<li>If <code>baseURL</code> ends with a slash
+(<code>https://api.example.com/v1/</code>) and the requested path starts
+with a slash (<code>/users</code>), Axios removes the duplicate slash,
+resulting in <code>https://api.example.com/v1/users</code>.</li>
+<li>If neither contains a separating slash
+(<code>https://api.example.com/v1</code> and <code>users</code>), Axios
+inserts a slash between them.</li>
+</ul></li>
+</ol>
+<h2 id="absolute-urls-override-baseurl">Absolute URLs Override
+<code>baseURL</code></h2>
+<p>Axios checks whether the provided path is an absolute URL before
+applying the <code>baseURL</code>. An absolute URL is identified if it
+starts with a protocol scheme (like <code>http://</code>,
+<code>https://</code>, or <code>//</code> for protocol-relative
+URLs).</p>
+<p>If you pass an absolute URL to an Axios instance configured with a
+<code>baseURL</code>, the <code>baseURL</code> is completely ignored for
+that specific request:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> api <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com/v1&#39;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// The baseURL is ignored; request goes to https://other-domain.com/data</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>api<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://other-domain.com/data&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<h2 id="browser-vs-nodejs-environment-resolution">Browser vs. Node.js
+Environment Resolution</h2>
+<p>While Axios uses its internal path-combining logic across both
+Node.js and browser environments, standard environment URL parsing rules
+apply once the final URL is constructed:</p>
+<ul>
+<li><strong>Node.js</strong>: The resolved full URL is passed directly
+to the native <code>http</code> or <code>https</code> modules. If no
+<code>baseURL</code> is set and a relative URL is used, Node.js throws
+an error because it lacks an implicit origin.</li>
+<li><strong>Browser</strong>: If <code>baseURL</code> is not set and a
+relative URL is passed, the browser resolves the request against the
+current document's origin (<code>window.location.origin</code>).</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

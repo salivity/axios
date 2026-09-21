@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracing Axios with OpenTelemetry in Node.js - axios</title>
+    <meta name="description" content="Integrating OpenTelemetry distributed tracing with the Axios HTTP client allows you to automatically monitor outbound HTTP requests, record latency, and propagate trace context headers across services. Because Axios relies on Node.js core http and https">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/tracing-axios-with-open-telemetry-in-node-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Tracing Axios with OpenTelemetry in Node.js - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/tracing-axios-with-open-telemetry-in-node-js" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Integrating OpenTelemetry distributed tracing with the Axios HTTP client allows you to automatically monitor outbound HTTP requests, record latency, and propagate trace context headers across services. Because Axios relies on Node.js core http and https" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="tracing-axios-with-opentelemetry-in-nodejs">Tracing Axios with
+OpenTelemetry in Node.js</h1>
+<p>Integrating OpenTelemetry distributed tracing with the Axios HTTP
+client allows you to automatically monitor outbound HTTP requests,
+record latency, and propagate trace context headers across services.
+Because Axios relies on Node.js core <code>http</code> and
+<code>https</code> modules, OpenTelemetry captures Axios requests
+automatically when HTTP instrumentation is initialized before the Axios
+module is loaded. Below is the step-by-step guide to configuring and
+verifying OpenTelemetry tracing for Axios.</p>
+<h3 id="step-1-install-required-dependencies">Step 1: Install Required
+Dependencies</h3>
+<p>Install the core OpenTelemetry SDK, the HTTP instrumentation package,
+and an exporter (such as the Console exporter for debugging or the OTLP
+exporter for production backends):</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install @opentelemetry/sdk-node <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  @opentelemetry/instrumentation-http <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  @opentelemetry/sdk-trace-base <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  @opentelemetry/resources <span class="dt">\</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  @opentelemetry/semantic-conventions <span class="dt">\</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  axios</span></code></pre></div>
+<h3 id="step-2-configure-the-tracing-initialization-file">Step 2:
+Configure the Tracing Initialization File</h3>
+<p>Create a dedicated initialization file (e.g.,
+<code>tracing.js</code>) to set up the OpenTelemetry Node SDK and
+configure the HTTP instrumentation:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// tracing.js</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> { NodeSDK } <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;@opentelemetry/sdk-node&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> { ConsoleSpanExporter } <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;@opentelemetry/sdk-trace-base&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> { HttpInstrumentation } <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;@opentelemetry/instrumentation-http&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> { Resource } <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;@opentelemetry/resources&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> { SemanticResourceAttributes } <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;@opentelemetry/semantic-conventions&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sdk <span class="op">=</span> <span class="kw">new</span> <span class="fu">NodeSDK</span>({</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">resource</span><span class="op">:</span> <span class="kw">new</span> <span class="fu">Resource</span>({</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    [SemanticResourceAttributes<span class="op">.</span><span class="at">SERVICE_NAME</span>]<span class="op">:</span> <span class="st">&#39;axios-client-service&#39;</span><span class="op">,</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  })<span class="op">,</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">traceExporter</span><span class="op">:</span> <span class="kw">new</span> <span class="fu">ConsoleSpanExporter</span>()<span class="op">,</span> <span class="co">// Replace with OTLPTraceExporter for production</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">instrumentations</span><span class="op">:</span> [</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> <span class="fu">HttpInstrumentation</span>({</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Optional: Add custom hooks to modify or filter request spans</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>      <span class="dt">requestHook</span><span class="op">:</span> (span<span class="op">,</span> request) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        span<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;custom.client&#39;</span><span class="op">,</span> <span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>      }<span class="op">,</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    })<span class="op">,</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  ]<span class="op">,</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>sdk<span class="op">.</span><span class="fu">start</span>()<span class="op">;</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="co">// Gracefully shut down the SDK on process exit</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="bu">process</span><span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;SIGTERM&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  sdk<span class="op">.</span><span class="fu">shutdown</span>()</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">then</span>(() <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Tracing terminated&#39;</span>))</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">catch</span>((error) <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Error terminating tracing&#39;</span><span class="op">,</span> error))</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">finally</span>(() <span class="kw">=&gt;</span> <span class="bu">process</span><span class="op">.</span><span class="fu">exit</span>(<span class="dv">0</span>))<span class="op">;</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="step-3-implement-your-axios-client">Step 3: Implement Your Axios
+Client</h3>
+<p>Write your application logic using Axios as usual in a separate file
+(e.g., <code>app.js</code>):</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// app.js</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">makeRequest</span>() {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">try</span> {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://jsonplaceholder.typicode.com/todos/1&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Response Status:&#39;</span><span class="op">,</span> response<span class="op">.</span><span class="at">status</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Response Data:&#39;</span><span class="op">,</span> response<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">catch</span> (error) {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Request failed:&#39;</span><span class="op">,</span> error<span class="op">.</span><span class="at">message</span>)<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="fu">makeRequest</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="step-4-run-the-application-with-preloaded-tracing">Step 4: Run
+the Application with Preloaded Tracing</h3>
+<p>OpenTelemetry must patch Node.js network modules before Axios is
+required. Run your application with the <code>--require</code> flag to
+load <code>tracing.js</code> before executing <code>app.js</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">node</span> <span class="at">--require</span> ./tracing.js app.js</span></code></pre></div>
+<h3 id="step-5-verify-distributed-context-propagation">Step 5: Verify
+Distributed Context Propagation</h3>
+<p>Once executed, the <code>HttpInstrumentation</code>
+automatically:</p>
+<ol type="1">
+<li>Generates an active span for the outgoing Axios request containing
+metadata such as HTTP method, URL, and status code.</li>
+<li>Injects W3C Trace Context headers (<code>traceparent</code> and
+<code>tracestate</code>) into the outgoing HTTP headers, allowing
+downstream services to continue the trace.</li>
+<li>Outputs the span details to your configured trace exporter.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

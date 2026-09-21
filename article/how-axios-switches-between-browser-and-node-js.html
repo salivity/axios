@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Switches Between Browser and Node.js - axios</title>
+    <meta name="description" content="Axios is an isomorphic (universal) HTTP client capable of running seamlessly in both client-side browser runtimes and server-side Node.js environments using the exact same API. It accomplishes this environment switching through an internal adapter design">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-switches-between-browser-and-node-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Switches Between Browser and Node.js - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-switches-between-browser-and-node-js" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios is an isomorphic (universal) HTTP client capable of running seamlessly in both client-side browser runtimes and server-side Node.js environments using the exact same API. It accomplishes this environment switching through an internal adapter design" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-switches-between-browser-and-nodejs">How Axios
+Switches Between Browser and Node.js</h1>
+<p>Axios is an isomorphic (universal) HTTP client capable of running
+seamlessly in both client-side browser runtimes and server-side Node.js
+environments using the exact same API. It accomplishes this environment
+switching through an internal adapter design pattern combined with
+automated runtime detection and package build configurations. Depending
+on where the code executes, Axios dynamically delegates network calls to
+either the browser's native networking APIs or Node.js's built-in
+networking modules.</p>
+<h3 id="the-adapter-pattern">The Adapter Pattern</h3>
+<p>At the core of Axios’s environment-switching mechanism is the adapter
+pattern. Axios separates the high-level request/response handling (such
+as interceptors, transformations, and configuration merging) from the
+low-level network dispatching.</p>
+<p>The dispatching is handled by dedicated adapters:</p>
+<ul>
+<li><strong>Browser Adapter (<code>xhr.js</code>):</strong> Interacts
+with the browser's native <code>XMLHttpRequest</code> (or Fetch API in
+newer/custom setups) to manage network requests, handle CORS, and track
+upload/download progress.</li>
+<li><strong>Node.js Adapter (<code>http.js</code>):</strong> Interacts
+with Node's native <code>http</code> and <code>https</code> modules,
+handling server-side concerns such as streams, HTTP/HTTPS proxies, and
+SSL certificates.</li>
+</ul>
+<h3 id="build-time-resolution-via-packagejson">Build-Time Resolution via
+<code>package.json</code></h3>
+<p>Modern module bundlers (such as Webpack, Rollup, and Vite) resolve
+the correct adapter at build time through conditional exports in Axios's
+<code>package.json</code>.</p>
+<p>Axios defines fields like <code>"browser"</code> and conditional
+subpath <code>"exports"</code>. When a bundler compiles an application
+for the web, it checks these fields and automatically substitutes the
+Node.js implementation with the browser implementation. This ensures
+that Node-specific APIs (which do not exist in the browser) are omitted
+from client-side bundles, reducing bundle size and preventing runtime
+errors.</p>
+<h3 id="runtime-environment-detection">Runtime Environment
+Detection</h3>
+<p>If the environment is not determined at build time, Axios detects the
+environment at runtime by inspecting global variables:</p>
+<ol type="1">
+<li><strong>Checking for Node.js:</strong> Axios verifies if the runtime
+includes Node-specific identifiers, such as checking if
+<code>typeof process !== 'undefined'</code> and
+<code>process.versions.node</code> exists.</li>
+<li><strong>Checking for the Browser:</strong> Axios checks for the
+presence of browser-specific globals like <code>window</code> or
+<code>document</code>, as well as <code>XMLHttpRequest</code>.</li>
+</ol>
+<p>Based on the evaluation of these global objects, Axios automatically
+assigns the appropriate default adapter to the request
+configuration.</p>
+<h3 id="custom-and-manual-adapter-configuration">Custom and Manual
+Adapter Configuration</h3>
+<p>Axios also allows developers to override the default switching
+mechanism manually. By defining the <code>adapter</code> property within
+the Axios configuration object, developers can enforce a specific
+transport layer or provide custom adapters for alternative environments,
+such as Web Workers, Service Workers, or testing mocks:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example: Explicitly defining a custom adapter</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/api/data&#39;</span><span class="op">,</span> {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">adapter</span><span class="op">:</span> <span class="st">&#39;fetch&#39;</span> <span class="co">// Or a custom adapter function</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Through the combination of <code>package.json</code> module mapping,
+runtime global detection, and the adapter architecture, Axios provides a
+unified interface across distinct JavaScript execution environments.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

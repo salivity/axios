@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Part Chunked File Uploads in Axios - axios</title>
+    <meta name="description" content="Handling multi-part chunked uploads in Axios involves splitting a large file into smaller binary pieces (chunks) on the client side and transmitting them sequentially or in parallel to a server. This approach prevents network timeout errors, reduces brow">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/multi-part-chunked-file-uploads-in-axios">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Multi-Part Chunked File Uploads in Axios - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/multi-part-chunked-file-uploads-in-axios" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Handling multi-part chunked uploads in Axios involves splitting a large file into smaller binary pieces (chunks) on the client side and transmitting them sequentially or in parallel to a server. This approach prevents network timeout errors, reduces brow" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="multi-part-chunked-file-uploads-in-axios">Multi-Part Chunked
+File Uploads in Axios</h1>
+<p>Handling multi-part chunked uploads in Axios involves splitting a
+large file into smaller binary pieces (chunks) on the client side and
+transmitting them sequentially or in parallel to a server. This approach
+prevents network timeout errors, reduces browser memory overhead, and
+allows users to pause, resume, or retry failed portions of an upload
+without restarting the entire process from the beginning.</p>
+<h2 id="why-use-chunked-uploads">Why Use Chunked Uploads?</h2>
+<p>Standard HTTP file uploads send the entire file payload in a single
+<code>POST</code> or <code>PUT</code> request. For files exceeding tens
+or hundreds of megabytes, this can lead to:</p>
+<ul>
+<li>High failure rates over unstable connections.</li>
+<li>Server-side payload size limits
+(<code>413 Payload Too Large</code>).</li>
+<li>Poor user experience due to the inability to resume interrupted
+uploads.</li>
+</ul>
+<p>By dividing the file into discrete chunks, you can transmit smaller,
+manageable payloads and reconstruct the original file on the server once
+all parts are received.</p>
+<hr />
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<h3 id="1-slice-the-file">1. Slice the File</h3>
+<p>In modern browsers, the standard <code>File</code> object inherits
+from <code>Blob</code>, which provides the
+<code>.slice(start, end)</code> method. Use this to divide the file into
+a specific chunk size (for example, 5 MB).</p>
+<h3 id="2-append-chunks-to-formdata">2. Append Chunks to FormData</h3>
+<p>Wrap each chunk in a <code>FormData</code> object along with
+necessary metadata, such as the chunk index, total chunk count, and a
+unique file identifier.</p>
+<h3 id="3-send-chunks-sequentially-with-axios">3. Send Chunks
+Sequentially with Axios</h3>
+<p>Iterate through the chunks, sending individual <code>POST</code>
+requests. Sending chunks sequentially ensures order and makes error
+handling straightforward.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">uploadFileInChunks</span>(file) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> CHUNK_SIZE <span class="op">=</span> <span class="dv">5</span> <span class="op">*</span> <span class="dv">1024</span> <span class="op">*</span> <span class="dv">1024</span><span class="op">;</span> <span class="co">// 5 MB per chunk</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> totalChunks <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">ceil</span>(file<span class="op">.</span><span class="at">size</span> <span class="op">/</span> CHUNK_SIZE)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> fileId <span class="op">=</span> <span class="vs">`</span><span class="sc">${</span>file<span class="op">.</span><span class="at">name</span><span class="sc">}</span><span class="vs">-</span><span class="sc">${</span>file<span class="op">.</span><span class="at">size</span><span class="sc">}</span><span class="vs">-</span><span class="sc">${</span>file<span class="op">.</span><span class="at">lastModified</span><span class="sc">}</span><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> chunkIndex <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> chunkIndex <span class="op">&lt;</span> totalChunks<span class="op">;</span> chunkIndex<span class="op">++</span>) {</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> start <span class="op">=</span> chunkIndex <span class="op">*</span> CHUNK_SIZE<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> end <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">min</span>(start <span class="op">+</span> CHUNK_SIZE<span class="op">,</span> file<span class="op">.</span><span class="at">size</span>)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> chunk <span class="op">=</span> file<span class="op">.</span><span class="fu">slice</span>(start<span class="op">,</span> end)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> formData <span class="op">=</span> <span class="kw">new</span> <span class="bu">FormData</span>()<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    formData<span class="op">.</span><span class="fu">append</span>(<span class="st">&#39;file&#39;</span><span class="op">,</span> chunk)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    formData<span class="op">.</span><span class="fu">append</span>(<span class="st">&#39;chunkIndex&#39;</span><span class="op">,</span> chunkIndex)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    formData<span class="op">.</span><span class="fu">append</span>(<span class="st">&#39;totalChunks&#39;</span><span class="op">,</span> totalChunks)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    formData<span class="op">.</span><span class="fu">append</span>(<span class="st">&#39;fileId&#39;</span><span class="op">,</span> fileId)<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    formData<span class="op">.</span><span class="fu">append</span>(<span class="st">&#39;fileName&#39;</span><span class="op">,</span> file<span class="op">.</span><span class="at">name</span>)<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span> {</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>      <span class="cf">await</span> axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;/api/upload-chunk&#39;</span><span class="op">,</span> formData<span class="op">,</span> {</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>          <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;multipart/form-data&#39;</span><span class="op">,</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="dt">onUploadProgress</span><span class="op">:</span> (progressEvent) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>          <span class="kw">const</span> chunkProgress <span class="op">=</span> progressEvent<span class="op">.</span><span class="at">loaded</span> <span class="op">/</span> progressEvent<span class="op">.</span><span class="at">total</span><span class="op">;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>          <span class="kw">const</span> totalProgress <span class="op">=</span> ((chunkIndex <span class="op">+</span> chunkProgress) <span class="op">/</span> totalChunks) <span class="op">*</span> <span class="dv">100</span><span class="op">;</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>          <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Upload Progress: </span><span class="sc">${</span>totalProgress<span class="op">.</span><span class="fu">toFixed</span>(<span class="dv">2</span>)<span class="sc">}</span><span class="vs">%`</span>)<span class="op">;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>        }<span class="op">,</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>      })<span class="op">;</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">catch</span> (error) {</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>      <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="vs">`Failed to upload chunk </span><span class="sc">${</span>chunkIndex<span class="sc">}</span><span class="vs">:`</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>      <span class="cf">throw</span> error<span class="op">;</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Notify the server that all chunks have been uploaded</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;/api/finalize-upload&#39;</span><span class="op">,</span> { fileId<span class="op">,</span> <span class="dt">fileName</span><span class="op">:</span> file<span class="op">.</span><span class="at">name</span><span class="op">,</span> totalChunks })<span class="op">;</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Upload complete&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<hr />
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li><strong>Retry Failed Chunks:</strong> Implement an exponential
+backoff retry loop for individual chunk requests so temporary network
+drops do not invalidate the entire upload.</li>
+<li><strong>Concurrency Control:</strong> While sequential uploads are
+simplest, uploading 2–4 chunks concurrently using
+<code>Promise.all()</code> or a queue can maximize throughput without
+overloading network resources.</li>
+<li><strong>File Hashing:</strong> Calculate a checksum (e.g., MD5 or
+SHA-256) of each chunk or the entire file to verify data integrity upon
+receipt on the server.</li>
+<li><strong>Cleanup Strategy:</strong> Ensure the server has a scheduled
+cleanup mechanism to delete abandoned or incomplete chunk uploads older
+than a specific retention window.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Interceptors vs Fetch API Middleware - axios</title>
+    <meta name="description" content="Axios interceptors and Fetch API middleware are two different approaches to manipulating HTTP requests and responses in JavaScript applications. While Axios provides a native, promise-based interceptor system out of the box, the standard Fetch API does n">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-interceptors-vs-fetch-api-middleware">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Interceptors vs Fetch API Middleware - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-interceptors-vs-fetch-api-middleware" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios interceptors and Fetch API middleware are two different approaches to manipulating HTTP requests and responses in JavaScript applications. While Axios provides a native, promise-based interceptor system out of the box, the standard Fetch API does n" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-interceptors-vs-fetch-api-middleware">Axios Interceptors
+vs Fetch API Middleware</h1>
+<p>Axios interceptors and Fetch API middleware are two different
+approaches to manipulating HTTP requests and responses in JavaScript
+applications. While Axios provides a native, promise-based interceptor
+system out of the box, the standard Fetch API does not support native
+interceptors, requiring developers to implement middleware patterns via
+custom wrapper functions or third-party abstractions. This article
+explores how both mechanisms operate, their architectural differences,
+and when to use each approach.</p>
+<h3 id="native-support-and-implementation">Native Support and
+Implementation</h3>
+<p><strong>Axios Interceptors</strong> are built directly into the
+library. You can attach request or response interceptors globally to the
+base Axios instance or to custom instances created with
+<code>axios.create()</code>.</p>
+<ul>
+<li><strong>Request Interceptors:</strong> Execute before the request is
+sent over the network. They are commonly used for appending
+authorization tokens, logging, or setting default headers.</li>
+<li><strong>Response Interceptors:</strong> Execute before the response
+promise is resolved or rejected in application code. They are typically
+used for global error handling, data transformation, or automatic token
+refreshing.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Axios Request Interceptor</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">request</span><span class="op">.</span><span class="fu">use</span>((config) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  config<span class="op">.</span><span class="at">headers</span><span class="op">.</span><span class="at">Authorization</span> <span class="op">=</span> <span class="vs">`Bearer </span><span class="sc">${</span>token<span class="sc">}</span><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> config<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p><strong>Fetch API Middleware</strong> is not a native browser
+feature. The standard <code>window.fetch()</code> function is a
+low-level API that accepts a URL and an options object, returning a
+promise. To achieve interceptor-like behavior with Fetch, developers
+must wrap the <code>fetch</code> function using higher-order functions,
+class-based clients, or libraries like Ky or Redux-inspired
+pipelines.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Fetch Wrapper / Middleware Pattern</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> customFetch <span class="op">=</span> <span class="kw">async</span> (url<span class="op">,</span> options <span class="op">=</span> {}) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Pre-request logic (Request Middleware)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  options<span class="op">.</span><span class="at">headers</span> <span class="op">=</span> {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span>options<span class="op">.</span><span class="at">headers</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">Authorization</span><span class="op">:</span> <span class="vs">`Bearer </span><span class="sc">${</span>token<span class="sc">}</span><span class="vs">`</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> <span class="fu">fetch</span>(url<span class="op">,</span> options)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Post-request logic (Response Middleware)</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="op">!</span>response<span class="op">.</span><span class="at">ok</span>) {</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Handle errors globally</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> response<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="execution-architecture-chains-vs-pipelines">Execution
+Architecture: Chains vs. Pipelines</h3>
+<p>The architectural pattern used to execute logic differs significantly
+between the two:</p>
+<ul>
+<li><strong>Axios (Promise Chains):</strong> Axios maintains two
+separate arrays: one for request interceptors and one for response
+interceptors. Interceptors are executed sequentially in the order they
+are defined. Request interceptors process the config object, the network
+call executes, and response interceptors process the resulting data or
+error.</li>
+<li><strong>Fetch Middleware ("Onion" Pipeline):</strong> Fetch
+middleware is often implemented using a composition or "onion" model
+(similar to Express or Koa). A single middleware function can handle
+both the request and response phases by controlling when
+<code>next()</code> or the underlying <code>fetch()</code> call is
+triggered.</li>
+</ul>
+<hr />
+<h3 id="error-handling">Error Handling</h3>
+<ul>
+<li><strong>Axios:</strong> Rejection handlers in Axios interceptors
+catch both network failures and non-2xx HTTP status codes automatically.
+If a server returns a <code>401 Unauthorized</code>, the response error
+interceptor catches it immediately, making centralized token refresh
+flows straightforward to implement.</li>
+<li><strong>Fetch:</strong> The native <code>fetch()</code> promise only
+rejects on actual network failures, not on HTTP error statuses (like
+<code>404</code> or <code>500</code>). A Fetch middleware must
+explicitly check <code>response.ok</code> or
+<code>response.status</code> to trigger error-handling logic before
+forwarding the result.</li>
+</ul>
+<hr />
+<h3 id="comparison-summary">Comparison Summary</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Axios Interceptors</th>
+<th style="text-align: left;">Fetch API Middleware</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Native Support</strong></td>
+<td style="text-align: left;">Built-in</td>
+<td style="text-align: left;">Requires custom wrapper or library</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Flow</strong></td>
+<td style="text-align: left;">Distinct Request/Response queues</td>
+<td style="text-align: left;">Composed wrapper / Pipeline pattern</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>HTTP Error Handling</strong></td>
+<td style="text-align: left;">Automatically triggers error interceptors
+for 4xx/5xx</td>
+<td style="text-align: left;">Requires manual <code>response.ok</code>
+check</td>
+</tr>
+<tr>
+<td
+style="text-align: left;"><strong>Cancellation/Ejection</strong></td>
+<td style="text-align: left;">Built-in <code>eject()</code> method</td>
+<td style="text-align: left;">Requires custom unsubscribe logic</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Bundle Size Impact</strong></td>
+<td style="text-align: left;">Adds external dependency size</td>
+<td style="text-align: left;">Minimal (using native
+<code>fetch</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="conclusion">Conclusion</h3>
+<p>The primary difference lies in convenience versus flexibility. Axios
+interceptors provide a standardized, ready-to-use solution for
+intercepting network traffic with minimal boilerplate. Conversely, Fetch
+middleware requires custom architectural setup but offers complete
+control over the execution pipeline without adding external library
+overhead.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

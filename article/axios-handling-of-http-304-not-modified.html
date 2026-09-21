@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Handling of HTTP 304 Not Modified - axios</title>
+    <meta name="description" content="When the Axios HTTP client receives an HTTP 304 Not Modified response, its behavior depends on default status validation rules and the runtime environment (browser vs. Node.js). By default, Axios treats a 304 status as an error and rejects the request pr">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-handling-of-http-304-not-modified">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Handling of HTTP 304 Not Modified - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-handling-of-http-304-not-modified" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When the Axios HTTP client receives an HTTP 304 Not Modified response, its behavior depends on default status validation rules and the runtime environment (browser vs. Node.js). By default, Axios treats a 304 status as an error and rejects the request pr" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-handling-of-http-304-not-modified">Axios Handling of HTTP
+304 Not Modified</h1>
+<p>When the Axios HTTP client receives an HTTP 304 Not Modified
+response, its behavior depends on default status validation rules and
+the runtime environment (browser vs. Node.js). By default, Axios treats
+a 304 status as an error and rejects the request promise because it only
+considers 2xx status codes successful. This article details why this
+rejection occurs, how the execution environment impacts the response,
+and how to properly configure Axios to handle 304 statuses.</p>
+<h3 id="default-status-validation-in-axios">Default Status Validation in
+Axios</h3>
+<p>Axios determines whether a promise should resolve or reject using the
+<code>validateStatus</code> configuration option. By default,
+<code>validateStatus</code> is defined as:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>validateStatus<span class="op">:</span> <span class="kw">function</span> (status) {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> status <span class="op">&gt;=</span> <span class="dv">200</span> <span class="op">&amp;&amp;</span> status <span class="op">&lt;</span> <span class="dv">300</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Because an HTTP 304 code falls outside the 200–299 range, Axios
+creates an <code>AxiosError</code> and rejects the promise. If an
+application does not intercept or catch this error, the request fails,
+even though HTTP 304 is a standard response indicating that a cached
+version of the resource is still valid.</p>
+<h3 id="environment-differences-browser-vs-nodejs">Environment
+Differences: Browser vs. Node.js</h3>
+<p>The runtime environment plays a significant role in how a 304
+response is surfaced to your code:</p>
+<ul>
+<li><strong>In the Browser:</strong> The browser's native networking
+layer (<code>XMLHttpRequest</code> or Fetch API) handles caching
+automatically. When conditional headers like <code>If-None-Match</code>
+(ETag) or <code>If-Modified-Since</code> are sent, the browser
+intercepts the server's 304 response, retrieves the content from its
+local cache, and passes a <code>200 OK</code> status with the cached
+body to Axios. Consequently, developers rarely encounter an unhandled
+304 in browser environments unless native caching is manually
+disabled.</li>
+<li><strong>In Node.js:</strong> Node.js lacks a built-in HTTP cache.
+When Axios makes a request that returns a 304 status, the Node.js HTTP
+adapter receives the raw 304 response directly from the server. Because
+there is no native cache to resolve the payload, Axios immediately
+rejects the promise based on the default <code>validateStatus</code>
+check.</li>
+</ul>
+<h3 id="how-to-handle-http-304-in-axios">How to Handle HTTP 304 in
+Axios</h3>
+<p>To prevent Axios from throwing an error upon encountering a 304
+status, you can customize the <code>validateStatus</code> function in
+your request configuration or global Axios instance:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/data&#39;</span><span class="op">,</span> {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;If-None-Match&#39;</span><span class="op">:</span> <span class="st">&#39;&quot;etag-value-12345&quot;&#39;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">validateStatus</span><span class="op">:</span> <span class="kw">function</span> (status) {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> (status <span class="op">&gt;=</span> <span class="dv">200</span> <span class="op">&amp;&amp;</span> status <span class="op">&lt;</span> <span class="dv">300</span>) <span class="op">||</span> status <span class="op">===</span> <span class="dv">304</span><span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">then</span>(response <span class="kw">=&gt;</span> {</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (response<span class="op">.</span><span class="at">status</span> <span class="op">===</span> <span class="dv">304</span>) {</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Resource has not changed; use application-level cached data</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Resource not modified. Using cached data.&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Fresh data received</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Received fresh data:&#39;</span><span class="op">,</span> response<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">catch</span>(error <span class="kw">=&gt;</span> {</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Request failed:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="managing-cached-payloads">Managing Cached Payloads</h3>
+<p>Accepting an HTTP 304 status via <code>validateStatus</code> does not
+automatically populate <code>response.data</code>. A 304 response
+typically contains empty response headers and no body. When working in
+server-side environments like Node.js, your application architecture
+must maintain its own local cache layer (such as Redis, an in-memory
+store, or an Axios caching interceptor) to serve the stored data when a
+304 status is returned.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

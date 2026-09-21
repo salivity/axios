@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline Request Queuing and Sync with Axios - axios</title>
+    <meta name="description" content="Offline request queuing allows web applications to intercept outgoing HTTP requests when a user lacks network connectivity, store them securely on the client, and automatically synchronize them with the server once the connection is restored. When using">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/offline-request-queuing-and-sync-with-axios">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Offline Request Queuing and Sync with Axios - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/offline-request-queuing-and-sync-with-axios" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Offline request queuing allows web applications to intercept outgoing HTTP requests when a user lacks network connectivity, store them securely on the client, and automatically synchronize them with the server once the connection is restored. When using" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="offline-request-queuing-and-sync-with-axios">Offline Request
+Queuing and Sync with Axios</h1>
+<p>Offline request queuing allows web applications to intercept outgoing
+HTTP requests when a user lacks network connectivity, store them
+securely on the client, and automatically synchronize them with the
+server once the connection is restored. When using the Axios HTTP
+client, achieving this offline-first architecture requires a combination
+of network status detection, Axios interceptors, persistent client-side
+storage, and automated replay mechanisms.</p>
+<h3 id="1-network-detection-and-axios-interceptors">1. Network Detection
+and Axios Interceptors</h3>
+<p>The foundation of offline handling is detecting network state changes
+and intercepting outgoing traffic. You can monitor connectivity via the
+browser's <code>navigator.onLine</code> API alongside
+<code>online</code> and <code>offline</code> event listeners.</p>
+<p>By applying Axios <strong>request interceptors</strong>, the
+application can evaluate the connection status before an HTTP call
+leaves the client:</p>
+<ul>
+<li><strong>Online:</strong> The request proceeds normally.</li>
+<li><strong>Offline:</strong> The interceptor cancels or pauses the
+actual HTTP dispatch, serializes the request configuration (URL, HTTP
+method, headers, query parameters, and payload data), and diverts it to
+a local storage queue.</li>
+</ul>
+<p>Alternatively, <strong>response interceptors</strong> can catch
+network errors (such as <code>ERR_INTERNET_DISCONNECTED</code> or
+timeout errors) and push the failed request into the queue
+retroactively.</p>
+<h3 id="2-persistent-client-side-storage">2. Persistent Client-Side
+Storage</h3>
+<p>In-memory queues fail if the user refreshes or closes the browser
+tab. Reliable offline systems use persistent browser storage to retain
+pending mutations:</p>
+<ul>
+<li><strong>IndexedDB:</strong> The recommended approach for storing
+queued requests. It supports structured data, binary blobs, and large
+storage quotas. Libraries like <code>idb</code> or
+<code>localforage</code> simplify interaction with IndexedDB.</li>
+<li><strong>LocalStorage:</strong> Suitable only for simple, lightweight
+requests due to synchronous execution and strict storage limits
+(typically 5MB).</li>
+</ul>
+<p>Each serialized request entry in the database should include a unique
+identifier, a timestamp, and a status flag (e.g., <code>pending</code>,
+<code>syncing</code>, <code>failed</code>).</p>
+<h3 id="3-replay-and-synchronization-engine">3. Replay and
+Synchronization Engine</h3>
+<p>When the <code>online</code> event fires, the application triggers a
+synchronization manager to process the queue:</p>
+<ol type="1">
+<li><strong>Sequential Execution:</strong> Requests are read from
+storage in the order they were created (FIFO) to preserve state
+consistency.</li>
+<li><strong>Re-dispatching:</strong> The synchronization engine
+recreates the Axios request using the stored configuration.</li>
+<li><strong>Queue Eviction:</strong> Once a request returns a
+<code>2xx</code> success status, it is removed from the storage
+queue.</li>
+<li><strong>Retry Strategies:</strong> If a request fails due to
+server-side errors, backoff logic (such as exponential backoff) prevents
+overwhelming the backend.</li>
+</ol>
+<h3 id="4-service-workers-and-workbox-background-sync">4. Service
+Workers and Workbox Background Sync</h3>
+<p>For progressive web applications (PWAs), the standard Web Background
+Sync API enables request synchronization even after the user navigates
+away from the application.</p>
+<p>Using <strong>Workbox Background Sync</strong> alongside Axios:</p>
+<ul>
+<li>The Service Worker intercepts network fetches originating from
+Axios.</li>
+<li>If the network fails, Workbox stores the request in an IndexedDB
+queue.</li>
+<li>The browser replays the request in the background as soon as
+connectivity returns, even if the application tab has been closed.</li>
+</ul>
+<h3 id="5-idempotency-and-conflict-management">5. Idempotency and
+Conflict Management</h3>
+<p>Queuing state-changing requests (such as <code>POST</code>,
+<code>PUT</code>, or <code>DELETE</code>) introduces the risk of
+duplicate operations or outdated state overrides. Robust implementations
+utilize:</p>
+<ul>
+<li><strong>Idempotency Keys:</strong> Attaching a unique UUID header
+(e.g., <code>X-Idempotency-Key</code>) to every queued request ensures
+that the backend processes duplicate submissions only once.</li>
+<li><strong>Optimistic UI Updates:</strong> Updating the local client
+state immediately upon user action, then rolling back or notifying the
+user if the eventual background sync fails permanently.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

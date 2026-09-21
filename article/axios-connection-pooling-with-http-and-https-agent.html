@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Connection Pooling with http and https Agent - axios</title>
+    <meta name="description" content="This article explores the critical role of Node.js's native http.Agent and https.Agent in managing connection pooling and socket reuse within the Axios HTTP client. You will learn how enabling persistent connections through keepAlive optimizes network pe">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-connection-pooling-with-http-and-https-agent">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Connection Pooling with http and https Agent - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-connection-pooling-with-http-and-https-agent" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the critical role of Node.js's native http.Agent and https.Agent in managing connection pooling and socket reuse within the Axios HTTP client. You will learn how enabling persistent connections through keepAlive optimizes network pe" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-connection-pooling-with-http-and-https-agent">Axios
+Connection Pooling with http and https Agent</h1>
+<p>This article explores the critical role of Node.js's native
+<code>http.Agent</code> and <code>https.Agent</code> in managing
+connection pooling and socket reuse within the Axios HTTP client. You
+will learn how enabling persistent connections through
+<code>keepAlive</code> optimizes network performance, eliminates latency
+caused by repetitive TCP/TLS handshakes, prevents socket exhaustion in
+high-concurrency applications, and how to properly configure custom
+agents in Axios.</p>
+<h2 id="what-are-httpagent-and-httpsagent">What Are
+<code>http.Agent</code> and <code>https.Agent</code>?</h2>
+<p>In Node.js, <code>http.Agent</code> and <code>https.Agent</code> are
+built-in classes responsible for managing the lifecycle, reuse, and
+pooling of underlying TCP sockets for outgoing HTTP and HTTPS requests.
+By default, every new network request creates a new socket connection
+and tears it down immediately after the response is received unless
+explicitly instructed to maintain it.</p>
+<p>When configured as a connection pool, an Agent holds open idle
+sockets so that subsequent requests to the same origin (host and port)
+can reuse an existing connection rather than establishing a new one from
+scratch.</p>
+<h2 id="why-connection-pooling-matters-in-axios">Why Connection Pooling
+Matters in Axios</h2>
+<p>Axios relies on the native Node.js HTTP/HTTPS modules when executed
+in a server environment. Without a persistent connection pool,
+high-volume Axios traffic introduces several performance
+bottlenecks:</p>
+<ul>
+<li><strong>TCP and TLS Overhead:</strong> Establishing a standard TCP
+connection requires a three-way handshake, and HTTPS adds extra rounds
+of TLS negotiation. Reusing existing connections skips this overhead,
+cutting latency significantly.</li>
+<li><strong>Socket Exhaustion:</strong> Rapidly opening and closing
+thousands of connections causes sockets to linger in the
+<code>TIME_WAIT</code> state, eventually exhausting the operating
+system's available file descriptors and ephemeral ports.</li>
+<li><strong>Resource Efficiency:</strong> Connection pooling lowers CPU
+and memory usage on both the client application and the target server by
+limiting concurrent handshakes.</li>
+</ul>
+<h2 id="how-to-configure-connection-pooling-in-axios">How to Configure
+Connection Pooling in Axios</h2>
+<p>Axios provides the <code>httpAgent</code> and <code>httpsAgent</code>
+configuration options to attach custom agent instances.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> http <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;http&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> https <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;https&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Create persistent agents for HTTP and HTTPS</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpAgent <span class="op">=</span> <span class="kw">new</span> http<span class="op">.</span><span class="fu">Agent</span>({</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">keepAlive</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxSockets</span><span class="op">:</span> <span class="dv">50</span><span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxFreeSockets</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">60000</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpsAgent <span class="op">=</span> <span class="kw">new</span> https<span class="op">.</span><span class="fu">Agent</span>({</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">keepAlive</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxSockets</span><span class="op">:</span> <span class="dv">50</span><span class="op">,</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxFreeSockets</span><span class="op">:</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">60000</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">// Attach agents to a global Axios instance</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com&#39;</span><span class="op">,</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  httpAgent<span class="op">,</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  httpsAgent<span class="op">,</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">10000</span> <span class="co">// Request timeout in ms</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>module<span class="op">.</span><span class="at">exports</span> <span class="op">=</span> apiClient<span class="op">;</span></span></code></pre></div>
+<h2 id="key-agent-configuration-options">Key Agent Configuration
+Options</h2>
+<p>When configuring <code>http.Agent</code> or <code>https.Agent</code>
+for Axios, the following options control connection behavior:</p>
+<ul>
+<li><strong><code>keepAlive</code> (boolean):</strong> Setting this to
+<code>true</code> instructs the agent to keep sockets open across
+multiple requests to the same origin.</li>
+<li><strong><code>keepAliveMsecs</code> (number):</strong> Defines the
+frequency in milliseconds for sending TCP Keep-Alive packets to keep
+intermediate network devices from dropping the idle connection. Defaults
+to <code>1000</code>.</li>
+<li><strong><code>maxSockets</code> (number):</strong> The maximum
+number of concurrent active sockets allowed per origin. If requests
+exceed this limit, they are queued until an active socket becomes free.
+Defaults to <code>Infinity</code>.</li>
+<li><strong><code>maxFreeSockets</code> (number):</strong> The maximum
+number of idle sockets left open per origin in a persistent state.
+Sockets exceeding this number are closed immediately upon completing
+their request. Defaults to <code>256</code>.</li>
+<li><strong><code>timeout</code> (number):</strong> The socket
+inactivity timeout in milliseconds before an idle socket in the free
+pool is closed.</li>
+</ul>
+<h2 id="best-practices-for-axios-agents">Best Practices for Axios
+Agents</h2>
+<ul>
+<li><strong>Share Agent Instances:</strong> Create agent instances once
+at application startup and share them across all Axios requests.
+Instantiating a new agent per request defeats the purpose of connection
+pooling.</li>
+<li><strong>Align Client and Server Timeouts:</strong> Ensure the
+agent's idle timeout is slightly shorter than the server's keep-alive
+timeout to avoid sending requests to a socket that the server is in the
+process of closing.</li>
+<li><strong>Separate HTTP and HTTPS Agents:</strong> Always provide
+distinct instances for <code>httpAgent</code> and
+<code>httpsAgent</code> to ensure the correct TLS wrap handlers are
+applied.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

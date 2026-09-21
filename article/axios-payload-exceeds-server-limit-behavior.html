@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Payload Exceeds Server Limit Behavior - axios</title>
+    <meta name="description" content="When sending data with the Axios HTTP client, exceeding payload size limits results in distinct behaviors depending on whether the limitation is enforced by the client runtime or the destination server. If the payload surpasses the client's internal thre">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-payload-exceeds-server-limit-behavior">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Payload Exceeds Server Limit Behavior - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-payload-exceeds-server-limit-behavior" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When sending data with the Axios HTTP client, exceeding payload size limits results in distinct behaviors depending on whether the limitation is enforced by the client runtime or the destination server. If the payload surpasses the client's internal thre" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-payload-exceeds-server-limit-behavior">Axios Payload
+Exceeds Server Limit Behavior</h1>
+<p>When sending data with the Axios HTTP client, exceeding payload size
+limits results in distinct behaviors depending on whether the limitation
+is enforced by the client runtime or the destination server. If the
+payload surpasses the client's internal threshold, Axios halts the
+request locally and throws an error. If the data reaches the server but
+exceeds server-configured constraints, the server terminates processing
+and typically responds with an HTTP 413 (Payload Too Large) status code
+or abruptly drops the connection, causing Axios to reject the request
+promise.</p>
+<h2 id="client-side-vs-server-side-enforcement">Client-Side vs.
+Server-Side Enforcement</h2>
+<p>Handling large payloads involves two distinct enforcement layers:</p>
+<ol type="1">
+<li><strong>Client-Side Restrictions (Node.js)</strong>: In Node.js
+environments, Axios enforces default size limits through
+<code>maxBodyLength</code> and <code>maxContentLength</code> (default is
+10 MB). If your payload exceeds this threshold, Axios throws a
+client-side error before the network request is fully dispatched:
+<pre class="text"><code>AxiosError: Request body larger than maxBodyLength limit</code></pre></li>
+<li><strong>Server-Side Restrictions</strong>: In browser environments
+or when Node.js client limits are raised, the full payload travels to
+the server. If the payload size exceeds limits set by intermediate
+proxies (like Nginx) or backend frameworks (like Express or Spring), the
+server takes over error handling.</li>
+</ol>
+<h2 id="server-behavior-and-axios-responses">Server Behavior and Axios
+Responses</h2>
+<p>When a server receives a payload exceeding its configured threshold,
+it typically responds in one of two ways:</p>
+<h3 id="1-http-413-payload-too-large">1. HTTP 413 (Payload Too
+Large)</h3>
+<p>The standard server behavior is returning an HTTP status code
+<code>413 Payload Too Large</code> (formerly
+<code>Request Entity Too Large</code>).</p>
+<p>When Axios receives a 413 response:</p>
+<ul>
+<li>The promise is rejected.</li>
+<li>Execution jumps to the <code>.catch()</code> block or a response
+interceptor.</li>
+<li>The error object contains the server response:
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;/upload&#39;</span><span class="op">,</span> largeData)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">catch</span>((error) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (error<span class="op">.</span><span class="at">response</span> <span class="op">&amp;&amp;</span> error<span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="at">status</span> <span class="op">===</span> <span class="dv">413</span>) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>      <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Payload exceeds server limit.&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span></code></pre></div></li>
+</ul>
+<h3 id="2-immediate-connection-termination-econnreset">2. Immediate
+Connection Termination (<code>ECONNRESET</code>)</h3>
+<p>To prevent Denial of Service (DoS) attacks and conserve bandwidth,
+some web servers and reverse proxies close the TCP socket immediately
+without waiting to read the rest of the stream or sending an HTTP
+response body.</p>
+<p>When this occurs:</p>
+<ul>
+<li>Axios cannot retrieve an HTTP status code.</li>
+<li>The error returned is a network error such as
+<code>ERR_BAD_RESPONSE</code>, <code>ECONNRESET</code>, or
+<code>socket hang up</code>.</li>
+<li><code>error.response</code> will be <code>undefined</code>, and
+<code>error.request</code> will contain the unfulfilled request
+details.</li>
+</ul>
+<h2 id="how-to-resolve-payload-size-errors">How to Resolve Payload Size
+Errors</h2>
+<p>Resolving payload size issues requires adjusting configurations on
+both the client and the server.</p>
+<h3 id="configure-axios">Configure Axios</h3>
+<p>To prevent Axios from blocking large uploads in Node.js, set
+<code>maxBodyLength</code> and <code>maxContentLength</code> to
+<code>Infinity</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;https://example.com/api/upload&#39;</span><span class="op">,</span> largeData<span class="op">,</span> {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxContentLength</span><span class="op">:</span> <span class="kw">Infinity</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxBodyLength</span><span class="op">:</span> <span class="kw">Infinity</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="configure-the-server-and-reverse-proxy">Configure the Server and
+Reverse Proxy</h3>
+<p>Ensure that all intermediary services are configured to accept the
+larger payload size:</p>
+<ul>
+<li><strong>Express.js (body-parser):</strong>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">use</span>(express<span class="op">.</span><span class="fu">json</span>({ <span class="dt">limit</span><span class="op">:</span> <span class="st">&#39;50mb&#39;</span> }))<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">use</span>(express<span class="op">.</span><span class="fu">urlencoded</span>({ <span class="dt">limit</span><span class="op">:</span> <span class="st">&#39;50mb&#39;</span><span class="op">,</span> <span class="dt">extended</span><span class="op">:</span> <span class="kw">true</span> }))<span class="op">;</span></span></code></pre></div></li>
+<li><strong>Nginx:</strong>
+<pre class="nginx"><code>client_max_body_size 50M;</code></pre></li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

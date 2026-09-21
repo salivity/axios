@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Mobile Network Limitations on iOS and Android - axios</title>
+    <meta name="description" content="Using Axios within mobile environments—such as React Native, Capacitor, or hybrid web views—exposes the JavaScript HTTP client to mobile operating system constraints that do not exist in standard browser or Node.js environments. This article covers t">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-mobile-network-limitations-on-i-os-and-android">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Mobile Network Limitations on iOS and Android - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-mobile-network-limitations-on-i-os-and-android" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Using Axios within mobile environments—such as React Native, Capacitor, or hybrid web views—exposes the JavaScript HTTP client to mobile operating system constraints that do not exist in standard browser or Node.js environments. This article covers t" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-mobile-network-limitations-on-ios-and-android">Axios
+Mobile Network Limitations on iOS and Android</h1>
+<p>Using Axios within mobile environments—such as React Native,
+Capacitor, or hybrid web views—exposes the JavaScript HTTP client to
+mobile operating system constraints that do not exist in standard
+browser or Node.js environments. This article covers the primary network
+limitations on iOS and Android affecting Axios, including background
+execution limits, platform security enforcement, unstable network
+transitions, and native bridge overhead.</p>
+<h3 id="background-execution-and-sleep-modes">Background Execution and
+Sleep Modes</h3>
+<p>Mobile operating systems aggressively terminate or suspend network
+tasks initiated by background applications to conserve battery life.</p>
+<ul>
+<li><strong>Android Doze Mode and App Standby:</strong> When an Android
+device is unplugged and stationary with the screen off, Doze mode
+restricts network access to background applications. Any Axios request
+initiated right before or during this state will either fail
+immediately, hang until a maintenance window opens, or time out.</li>
+<li><strong>iOS Background Execution Restrictions:</strong> iOS suspends
+JavaScript runtimes within seconds of an app moving to the background.
+Axios requests that are in-flight when the app is minimized will be
+paused or aborted by the OS, frequently resulting in
+<code>Network Error</code> or timeout exceptions upon app
+resumption.</li>
+</ul>
+<h3 id="platform-level-security-policies">Platform-Level Security
+Policies</h3>
+<p>Both iOS and Android enforce strict transport security at the OS
+level, which can silently block Axios requests if configurations are
+missing.</p>
+<ul>
+<li><strong>iOS App Transport Security (ATS):</strong> Apple requires
+all network traffic to use HTTPS with strict TLS requirements (TLS 1.2
+or higher, forward secrecy). Axios requests to plain HTTP endpoints or
+servers with deprecated ciphers will fail at the native layer.</li>
+<li><strong>Android Cleartext Traffic Policy:</strong> Since Android 9
+(API level 28), cleartext (HTTP) traffic is disabled by default. If an
+application attempts an Axios call to an <code>http://</code> domain
+without explicitly allowing cleartext traffic in the
+<code>network_security_config.xml</code> file, the request will fail
+instantly.</li>
+<li><strong>SSL Pinning Limitations:</strong> Axios runs in the
+JavaScript layer and lacks built-in support for native SSL certificate
+pinning. To protect against man-in-the-middle (MITM) attacks on mobile
+networks, developers must replace Axios's transport adapter with a
+native mobile networking library.</li>
+</ul>
+<h3 id="network-transitions-and-connection-flakiness">Network
+Transitions and Connection Flakiness</h3>
+<p>Mobile devices frequently switch between Wi-Fi networks, cellular
+towers (4G/5G), and dead zones.</p>
+<ul>
+<li><strong>Socket Invalidation on Network Switch:</strong> When a
+device transitions from Wi-Fi to cellular data, active TCP connections
+are severed. Because Axios relies on standard underlying XHR or Fetch
+adapters, it does not automatically re-establish broken sockets or retry
+failed requests unless configured with custom interceptors or
+third-party retry plugins.</li>
+<li><strong>High Latency and Packet Loss:</strong> Mobile networks often
+experience high packet latency and intermittent packet loss. Default
+Axios timeout thresholds that work reliably on broadband connections
+will frequently trigger <code>ECONNABORTED</code> errors on mobile
+connections unless explicitly adjusted for mobile conditions.</li>
+</ul>
+<h3 id="javascript-to-native-bridge-overhead">JavaScript-to-Native
+Bridge Overhead</h3>
+<p>In frameworks like React Native, Axios does not communicate directly
+with the network hardware. Instead, it serializes request and response
+data across an asynchronous bridge to native modules
+(<code>NSURLSession</code> on iOS and <code>OkHttp</code> on
+Android).</p>
+<ul>
+<li><strong>Large Payload Bottlenecks:</strong> Uploading or downloading
+large files (such as high-resolution images or videos) through Axios
+requires base64 encoding or binary serialization across the bridge. This
+can cause high memory consumption, garbage collection spikes, and app
+crashes on low-end mobile devices. Native file system downloaders are
+required for heavy transfers instead of Axios.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

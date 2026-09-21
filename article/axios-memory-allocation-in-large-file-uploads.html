@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Memory Allocation in Large File Uploads - axios</title>
+    <meta name="description" content="This article explores how the Axios HTTP client handles memory allocation during large multipart file uploads across both Node.js and browser environments. It examines the underlying mechanisms used to avoid high RAM usage—such as Node.js streams and b">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-memory-allocation-in-large-file-uploads">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Memory Allocation in Large File Uploads - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-memory-allocation-in-large-file-uploads" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how the Axios HTTP client handles memory allocation during large multipart file uploads across both Node.js and browser environments. It examines the underlying mechanisms used to avoid high RAM usage—such as Node.js streams and b" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-memory-allocation-in-large-file-uploads">Axios Memory
+Allocation in Large File Uploads</h1>
+<p>This article explores how the Axios HTTP client handles memory
+allocation during large multipart file uploads across both Node.js and
+browser environments. It examines the underlying mechanisms used to
+avoid high RAM usage—such as Node.js streams and browser
+<code>Blob</code> objects—while highlighting common configuration
+pitfalls that cause memory spikes and practical solutions to maintain
+low memory footprints.</p>
+<h2 id="nodejs-vs-browser-runtime-architecture">Node.js vs. Browser
+Runtime Architecture</h2>
+<p>Axios acts as an isomorphic wrapper, meaning its memory management
+relies entirely on the host environment: Node.js or the browser.</p>
+<h3 id="1-nodejs-environment">1. Node.js Environment</h3>
+<p>In Node.js, Axios uses the native <code>http</code> and
+<code>https</code> modules. Memory management during a multipart upload
+depends directly on whether data is passed as a complete
+<code>Buffer</code> or as a <code>ReadableStream</code>.</p>
+<ul>
+<li><strong>Buffer-Based Uploads (High Memory):</strong> If a file is
+read entirely into memory using <code>fs.readFileSync()</code> before
+being appended to a <code>FormData</code> instance, the entire file size
+is allocated directly in the Node.js V8 heap. This can easily trigger an
+<code>Out of Memory</code> (OOM) crash for files larger than the
+available heap limit.</li>
+<li><strong>Stream-Based Uploads (Low Memory):</strong> By utilizing
+<code>fs.createReadStream()</code>, the file is read in small,
+sequential chunks (typically 64 KB by default). Axios pipes this stream
+into the HTTP request body. Only a tiny fraction of the file resides in
+the V8 heap at any given moment.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> fs <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;fs&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> <span class="bu">FormData</span> <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;form-data&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> form <span class="op">=</span> <span class="kw">new</span> <span class="bu">FormData</span>()<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>form<span class="op">.</span><span class="fu">append</span>(<span class="st">&#39;file&#39;</span><span class="op">,</span> fs<span class="op">.</span><span class="fu">createReadStream</span>(<span class="st">&#39;/path/to/large-file.zip&#39;</span>))<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;https://example.com/upload&#39;</span><span class="op">,</span> form<span class="op">,</span> {</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> form<span class="op">.</span><span class="fu">getHeaders</span>()<span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxBodyLength</span><span class="op">:</span> <span class="kw">Infinity</span><span class="op">,</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">maxContentLength</span><span class="op">:</span> <span class="kw">Infinity</span><span class="op">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h4 id="stream-backpressure">Stream Backpressure</h4>
+<p>Axios and the underlying Node.js stream implementation rely on
+backpressure handling. If the network socket is slower than the disk
+read rate, Node.js pauses reading from disk until the internal buffer
+drains, preventing unbounded memory growth.</p>
+<h3 id="2-browser-environment">2. Browser Environment</h3>
+<p>In browsers, Axios uses the native <code>XMLHttpRequest</code> (XHR)
+API.</p>
+<ul>
+<li><strong><code>File</code> and <code>Blob</code> References:</strong>
+Browsers do not load an entire file into the JavaScript heap when
+selecting it via <code>&lt;input type="file"&gt;</code>. Instead, the
+<code>File</code> object is merely a pointer to the file on the
+underlying operating system's filesystem.</li>
+<li><strong>Native Chunking:</strong> When a <code>File</code> or
+<code>Blob</code> is appended to a native <code>FormData</code> object
+and passed to Axios, the browser’s internal network stack reads and
+streams the file directly from disk to the network interface in native
+memory, bypassing the JavaScript engine's garbage collection and
+heap.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> formData <span class="op">=</span> <span class="kw">new</span> <span class="bu">FormData</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>formData<span class="op">.</span><span class="fu">append</span>(<span class="st">&#39;file&#39;</span><span class="op">,</span> fileInputElement<span class="op">.</span><span class="at">files</span>[<span class="dv">0</span>])<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;/upload&#39;</span><span class="op">,</span> formData<span class="op">,</span> {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> { <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;multipart/form-data&#39;</span> }</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="critical-axios-settings-for-large-uploads">Critical Axios
+Settings for Large Uploads</h2>
+<p>By default, Axios includes safety caps to prevent runaway memory
+usage from unexpected payload sizes. When handling large files, these
+settings must be adjusted:</p>
+<ol type="1">
+<li><strong><code>maxBodyLength</code>:</strong> Defines the maximum
+allowed size of the HTTP request body in bytes (default is 10 MB in
+Node.js). Setting this to <code>Infinity</code> allows large streams
+without throwing an error before transmission begins.</li>
+<li><strong><code>maxContentLength</code>:</strong> Defines the maximum
+allowed size of the HTTP response content. This should also be set to
+<code>Infinity</code> if the server returns large payloads.</li>
+</ol>
+<h2 id="key-takeaways-for-preventing-memory-leaks">Key Takeaways for
+Preventing Memory Leaks</h2>
+<ul>
+<li><strong>Never convert large files to Base64 or full in-memory
+strings</strong>, as this increases payload size by ~33% and places the
+entire payload into the active JavaScript heap.</li>
+<li><strong>Always pass streams in Node.js</strong> instead of read
+buffers to maintain a constant, minimal memory footprint regardless of
+file size.</li>
+<li><strong>Let the browser handle native <code>File</code>
+objects</strong> rather than reading them via
+<code>FileReader.readAsArrayBuffer()</code> before upload.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

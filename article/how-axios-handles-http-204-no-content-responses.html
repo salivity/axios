@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Handles HTTP 204 No Content Responses - axios</title>
+    <meta name="description" content="The Axios HTTP client handles HTTP 204 No Content responses by resolving the request promise successfully and returning a standard response object containing an empty string as the data payload. Because status 204 falls within the default 2xx success ran">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-handles-http-204-no-content-responses">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Handles HTTP 204 No Content Responses - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-handles-http-204-no-content-responses" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Axios HTTP client handles HTTP 204 No Content responses by resolving the request promise successfully and returning a standard response object containing an empty string as the data payload. Because status 204 falls within the default 2xx success ran" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-handles-http-204-no-content-responses">How Axios
+Handles HTTP 204 No Content Responses</h1>
+<p>The Axios HTTP client handles HTTP 204 No Content responses by
+resolving the request promise successfully and returning a standard
+response object containing an empty string as the data payload. Because
+status 204 falls within the default 2xx success range, Axios does not
+throw an error, nor does its built-in JSON parser fail when processing
+the absent body.</p>
+<h3 id="default-status-validation">Default Status Validation</h3>
+<p>Axios determines whether to resolve or reject a promise using the
+<code>validateStatus</code> configuration option. By default, any HTTP
+status code from 200 through 299 is treated as a success:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>validateStatus<span class="op">:</span> <span class="kw">function</span> (status) {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> status <span class="op">&gt;=</span> <span class="dv">200</span> <span class="op">&amp;&amp;</span> status <span class="op">&lt;</span> <span class="dv">300</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Since 204 falls within this range, requests completing with this code
+trigger the <code>.then()</code> block or return successfully to an
+<code>await</code> expression instead of triggering a
+<code>.catch()</code> block.</p>
+<h3 id="response-data-parsing">Response Data Parsing</h3>
+<p>When an HTTP response is received, Axios automatically runs its
+default <code>transformResponse</code> functions, which attempt to parse
+incoming payloads using <code>JSON.parse</code>.</p>
+<p>For an HTTP 204 response:</p>
+<ul>
+<li>The server sends headers followed by an empty body.</li>
+<li>Axios detects that the response body is empty.</li>
+<li>The <code>JSON.parse</code> step is bypassed for empty strings,
+preventing <code>SyntaxError: Unexpected end of JSON input</code>
+errors.</li>
+<li>The resulting <code>response.data</code> property is set to an empty
+string (<code>""</code>).</li>
+</ul>
+<h3 id="structure-of-a-204-response-object">Structure of a 204 Response
+Object</h3>
+<p>When handling a 204 response, the resolved Axios response object
+contains the following key properties:</p>
+<ul>
+<li><strong><code>status</code></strong>: <code>204</code></li>
+<li><strong><code>statusText</code></strong>:
+<code>"No Content"</code></li>
+<li><strong><code>data</code></strong>: <code>""</code> (empty
+string)</li>
+<li><strong><code>headers</code></strong>: An object containing any
+response headers sent by the server.</li>
+<li><strong><code>config</code></strong>: The Axios configuration object
+used for the request.</li>
+<li><strong><code>request</code></strong>: The underlying
+<code>XMLHttpRequest</code> (in browsers) or
+<code>http.ClientRequest</code> (in Node.js).</li>
+</ul>
+<h3 id="best-practices-for-handling-204-in-application-code">Best
+Practices for Handling 204 in Application Code</h3>
+<p>Because <code>response.data</code> is an empty string rather than
+<code>null</code> or <code>undefined</code>, applications should avoid
+attempting to destructure or access properties on
+<code>response.data</code> directly after <code>DELETE</code>,
+<code>PUT</code>, or <code>PATCH</code> requests that return 204.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">delete</span>(<span class="st">&#39;/api/resource/123&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (response<span class="op">.</span><span class="at">status</span> <span class="op">===</span> <span class="dv">204</span>) {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Action succeeded with no payload returned</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Resource successfully deleted.&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>} <span class="cf">catch</span> (error) {</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Request failed:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>If your application architecture requires empty responses to yield
+<code>null</code> instead of an empty string, you can normalize the
+response using an Axios response interceptor:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="fu">use</span>((response) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (response<span class="op">.</span><span class="at">status</span> <span class="op">===</span> <span class="dv">204</span> <span class="op">&amp;&amp;</span> response<span class="op">.</span><span class="at">data</span> <span class="op">===</span> <span class="st">&quot;&quot;</span>) {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    response<span class="op">.</span><span class="at">data</span> <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> response<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

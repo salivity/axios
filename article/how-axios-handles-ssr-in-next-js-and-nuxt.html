@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Handles SSR in Next.js and Nuxt - axios</title>
+    <meta name="description" content="This article explains how the Axios HTTP client operates within Server-Side Rendering (SSR) architectures such as Next.js and Nuxt. It covers how Axios executes seamlessly across client and server environments through its isomorphic design, how to manage">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-handles-ssr-in-next-js-and-nuxt">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Handles SSR in Next.js and Nuxt - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-handles-ssr-in-next-js-and-nuxt" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the Axios HTTP client operates within Server-Side Rendering (SSR) architectures such as Next.js and Nuxt. It covers how Axios executes seamlessly across client and server environments through its isomorphic design, how to manage" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-handles-ssr-in-nextjs-and-nuxt">How Axios Handles SSR
+in Next.js and Nuxt</h1>
+<p>This article explains how the Axios HTTP client operates within
+Server-Side Rendering (SSR) architectures such as Next.js and Nuxt. It
+covers how Axios executes seamlessly across client and server
+environments through its isomorphic design, how to manage
+context-specific challenges like cookie forwarding and relative URLs,
+and the best practices for preventing cross-request data leaks on the
+server.</p>
+<h2 id="isomorphic-execution-and-adapters">Isomorphic Execution and
+Adapters</h2>
+<p>Axios is an isomorphic (or universal) library, meaning identical code
+can run in both the browser and a Node.js server. It achieves this using
+platform-specific adapters:</p>
+<ul>
+<li><strong>Node.js Environment (Server):</strong> Axios uses native
+Node.js <code>http</code> and <code>https</code> modules to dispatch
+network requests.</li>
+<li><strong>Browser Environment (Client):</strong> Axios relies on the
+<code>XMLHttpRequest</code> interface (or the Fetch API in newer builds)
+to handle requests directly within the browser runtime.</li>
+</ul>
+<p>When a page is rendered on the server in Next.js or Nuxt, Axios
+automatically switches to its Node.js adapter to fetch data before the
+final HTML is generated and sent to the client.</p>
+<h2 id="handling-ssr-in-nextjs">Handling SSR in Next.js</h2>
+<p>In Next.js, SSR data fetching occurs primarily within server-only
+functions like <code>getServerSideProps</code> (Pages Router) or inside
+React Server Components and Server Actions (App Router).</p>
+<h3 id="absolute-urls-requirement">Absolute URLs Requirement</h3>
+<p>Node.js does not have an implicit origin (such as
+<code>window.location.origin</code>). Because of this, relative
+endpoints like <code>/api/user</code> will fail during server execution.
+Requests must use fully qualified absolute URLs (e.g.,
+<code>https://api.example.com/user</code> or
+<code>http://localhost:3000/api/user</code>).</p>
+<h3 id="forwarding-headers-and-authentication">Forwarding Headers and
+Authentication</h3>
+<p>Server-side requests made by Axios do not automatically include
+browser cookies or user headers. In <code>getServerSideProps</code>, you
+must manually extract incoming request headers from the
+<code>context</code> object and assign them to the Axios
+configuration:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">async</span> <span class="kw">function</span> <span class="fu">getServerSideProps</span>(context) {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> { req } <span class="op">=</span> context<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/profile&#39;</span><span class="op">,</span> {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">cookie</span><span class="op">:</span> req<span class="op">.</span><span class="at">headers</span><span class="op">.</span><span class="at">cookie</span> <span class="op">||</span> <span class="st">&#39;&#39;</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">authorization</span><span class="op">:</span> req<span class="op">.</span><span class="at">headers</span><span class="op">.</span><span class="at">authorization</span> <span class="op">||</span> <span class="st">&#39;&#39;</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">props</span><span class="op">:</span> {</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>      <span class="dt">user</span><span class="op">:</span> response<span class="op">.</span><span class="at">data</span><span class="op">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="handling-ssr-in-nuxt">Handling SSR in Nuxt</h2>
+<p>Nuxt provides built-in mechanisms (such as <code>useAsyncData</code>
+and the older <code>@nuxtjs/axios</code> module) to coordinate data
+fetching across both boundaries.</p>
+<h3 id="dynamic-base-urls">Dynamic Base URLs</h3>
+<p>Nuxt allows defining different base URLs depending on the execution
+context. When using Axios in Nuxt, configure a <code>baseURL</code> for
+client-side requests and a <code>browserBaseURL</code> or
+server-specific base URL for internal API communication (often targeting
+internal Docker networks or localhost).</p>
+<h3 id="nuxt-ssr-context-and-interceptors">Nuxt SSR Context and
+Interceptors</h3>
+<p>In Nuxt, interceptors can attach session data during SSR. By
+accessing the Nuxt event context (<code>useRequestEvent</code> in Nuxt 3
+or the <code>context</code> parameter in Nuxt 2 plugins), Axios can be
+configured to mirror authentication tokens and cookies:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Nuxt 3 plugin example</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="im">default</span> <span class="fu">defineNuxtPlugin</span>(() <span class="kw">=&gt;</span> {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> <span class="bu">event</span> <span class="op">=</span> <span class="fu">useRequestEvent</span>()<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> api <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">baseURL</span><span class="op">:</span> <span class="bu">process</span><span class="op">.</span><span class="at">server</span> <span class="op">?</span> <span class="bu">process</span><span class="op">.</span><span class="at">env</span><span class="op">.</span><span class="at">INTERNAL_API_URL</span> <span class="op">:</span> <span class="bu">process</span><span class="op">.</span><span class="at">env</span><span class="op">.</span><span class="at">PUBLIC_API_URL</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="bu">process</span><span class="op">.</span><span class="at">server</span> <span class="op">&amp;&amp;</span> <span class="bu">event</span>) {</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    api<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">headers</span><span class="op">.</span><span class="at">common</span><span class="op">.</span><span class="at">cookie</span> <span class="op">=</span> <span class="bu">event</span><span class="op">.</span><span class="at">node</span><span class="op">.</span><span class="at">req</span><span class="op">.</span><span class="at">headers</span><span class="op">.</span><span class="at">cookie</span> <span class="op">||</span> <span class="st">&#39;&#39;</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="dt">provide</span><span class="op">:</span> { api }<span class="op">,</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="core-ssr-challenges-and-solutions">Core SSR Challenges and
+Solutions</h2>
+<h3 id="1-avoiding-state-and-credential-leaks">1. Avoiding State and
+Credential Leaks</h3>
+<p>In a client-only single-page application, a single global Axios
+instance works well. In SSR, the Node.js server serves multiple users
+concurrently. Storing user-specific credentials (like tokens or cookies)
+on a shared, global Axios instance creates a critical security
+vulnerability where one user's session data can leak to another
+user.</p>
+<p><strong>Solution:</strong> Create fresh, request-scoped Axios
+instances using <code>axios.create()</code> inside server lifecycle
+hooks or plugins for each incoming request.</p>
+<h3 id="2-hydration-mismatches-and-duplicate-requests">2. Hydration
+Mismatches and Duplicate Requests</h3>
+<p>If data is fetched on the server using Axios, that same data must be
+passed down to the client as part of the initial state payload (via
+Next.js <code>props</code> or Nuxt
+<code>useState</code>/<code>useAsyncData</code>). If the client does not
+receive the initial state, Axios will execute the request a second time
+on the client upon page load, resulting in layout flickering or
+hydration errors.</p>
+<h3 id="3-server-to-server-network-latency">3. Server-to-Server Network
+Latency</h3>
+<p>When rendering on the server, using public domain names can route
+traffic out through public DNS and load balancers back into the same
+server infrastructure.</p>
+<p><strong>Solution:</strong> Configure Axios to use private, internal
+network addresses (such as <code>http://127.0.0.1:port</code> or
+internal service names in containerized environments) when
+<code>process.server</code> or
+<code>typeof window === 'undefined'</code> evaluates to true.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

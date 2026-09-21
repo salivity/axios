@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Config: Shallow vs Deep Merging Explained - axios</title>
+    <meta name="description" content="When making HTTP requests with Axios, configurations can be defined at the global level, on a specific Axios instance, or individually within a single request. Understanding the difference between shallow and deep merging of these configurations is essen">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-config-shallow-vs-deep-merging-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Config: Shallow vs Deep Merging Explained - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-config-shallow-vs-deep-merging-explained" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When making HTTP requests with Axios, configurations can be defined at the global level, on a specific Axios instance, or individually within a single request. Understanding the difference between shallow and deep merging of these configurations is essen" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-config-shallow-vs-deep-merging-explained">Axios Config:
+Shallow vs Deep Merging Explained</h1>
+<p>When making HTTP requests with Axios, configurations can be defined
+at the global level, on a specific Axios instance, or individually
+within a single request. Understanding the difference between shallow
+and deep merging of these configurations is essential for effectively
+managing headers, query parameters, and other request options without
+accidentally wiping out critical default settings. This article breaks
+down how shallow and deep merging work in Axios, which properties are
+affected by each approach, and how to properly structure your request
+configurations.</p>
+<h2 id="shallow-merging">Shallow Merging</h2>
+<p>Shallow merging (often achieved using <code>Object.assign()</code> or
+the object spread operator <code>...</code>) copies top-level properties
+from one object to another. If a property value is a primitive (such as
+a string, number, or boolean), the value is overwritten. If a property
+value is a nested object, the shallow merge completely replaces the
+entire target object reference with the source object reference instead
+of combining their inner properties.</p>
+<h3 id="example-in-axios-context">Example in Axios Context</h3>
+<p>If Axios used pure shallow merging for all properties, a scenario
+with query parameters would behave like this:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Instance configuration</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> api <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">params</span><span class="op">:</span> {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">apiKey</span><span class="op">:</span> <span class="st">&#39;12345&#39;</span><span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">version</span><span class="op">:</span> <span class="st">&#39;v1&#39;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Request configuration</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>api<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/users&#39;</span><span class="op">,</span> {</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">params</span><span class="op">:</span> {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">limit</span><span class="op">:</span> <span class="dv">10</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Under a shallow merge, the request's <code>params</code> object
+(<code>{ limit: 10 }</code>) completely replaces the instance
+<code>params</code> object. As a result, <code>apiKey</code> and
+<code>version</code> are discarded, and only <code>limit=10</code> is
+sent to the server.</p>
+<h2 id="deep-merging">Deep Merging</h2>
+<p>Deep merging (recursive merging) inspects nested objects. When both
+the source and target contain an object at the same key, deep merging
+enters those objects and merges their sub-properties rather than
+replacing the parent object entirely.</p>
+<h3 id="example-in-axios-context-1">Example in Axios Context</h3>
+<p>Using the previous example under a deep merge strategy, the resulting
+<code>params</code> object would be:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">apiKey</span><span class="op">:</span> <span class="st">&#39;12345&#39;</span><span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">version</span><span class="op">:</span> <span class="st">&#39;v1&#39;</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">limit</span><span class="op">:</span> <span class="dv">10</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Both the default configuration properties and the request-level
+properties are preserved.</p>
+<h2 id="how-axios-handles-merging">How Axios Handles Merging</h2>
+<p>Axios does not apply a single blanket merge strategy across all
+configuration properties. Instead, it uses a hybrid approach based on
+the property type:</p>
+<h3 id="1-headers-deep-merged">1. Headers (Deep Merged)</h3>
+<p>The <code>headers</code> configuration receives specialized deep
+merging. Axios combines headers from multiple layers according to a
+strict hierarchy:</p>
+<ol type="1">
+<li><code>axios.defaults.headers.common</code></li>
+<li><code>axios.defaults.headers[method]</code> (e.g., <code>get</code>,
+<code>post</code>)</li>
+<li>Instance-level headers</li>
+<li>Request-level headers</li>
+</ol>
+<p>If you define an <code>Authorization</code> header at the instance
+level and a <code>Content-Type</code> header at the request level, Axios
+deep-merges them so both headers are sent in the final HTTP request.</p>
+<h3 id="2-general-configuration-properties-shallowly-replaced">2.
+General Configuration Properties (Shallowly Replaced)</h3>
+<p>Most non-header properties use shallow replacement. These
+include:</p>
+<ul>
+<li><code>params</code> (URL query parameters)</li>
+<li><code>data</code> (request body)</li>
+<li><code>auth</code> (Basic authentication credentials)</li>
+<li><code>timeout</code>, <code>baseURL</code>,
+<code>responseType</code>, <code>validateStatus</code></li>
+</ul>
+<p>For these properties, whatever you specify at the request level
+completely replaces the default or instance-level setting.</p>
+<h3 id="3-arrays-replaced-not-merged">3. Arrays (Replaced, Not
+Merged)</h3>
+<p>Properties that hold arrays, such as <code>transformRequest</code>
+and <code>transformResponse</code>, are completely overwritten by
+lower-level configurations rather than concatenated.</p>
+<h2 id="summary-of-differences">Summary of Differences</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Shallow Merging</th>
+<th style="text-align: left;">Deep Merging</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Object Handling</strong></td>
+<td style="text-align: left;">Replaces nested objects entirely</td>
+<td style="text-align: left;">Merges sub-properties inside nested
+objects</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Axios Usage</strong></td>
+<td style="text-align: left;">Applied to <code>params</code>,
+<code>auth</code>, <code>data</code>, arrays, and primitives</td>
+<td style="text-align: left;">Applied specifically to
+<code>headers</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Risk</strong></td>
+<td style="text-align: left;">Can unintentionally drop baseline nested
+properties</td>
+<td style="text-align: left;">Can unintentionally retain stale
+sub-properties</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Precedence</strong></td>
+<td style="text-align: left;">Later top-level values overwrite earlier
+top-level values</td>
+<td style="text-align: left;">Deeper values overwrite earlier values at
+the same key path</td>
+</tr>
+</tbody>
+</table>
+<p>To avoid unexpected request behavior, always supply complete nested
+objects (such as <code>params</code>) when overriding them at the
+request level, while relying on Axios to automatically preserve and
+merge your baseline <code>headers</code>.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

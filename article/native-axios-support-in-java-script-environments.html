@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Native Axios Support in JavaScript Environments - axios</title>
+    <meta name="description" content="This article examines whether any development runtime or platform supports the Axios HTTP client natively out of the box. It clarifies the distinction between standard JavaScript execution environments and Axios as a third-party dependency, detailing why">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/native-axios-support-in-java-script-environments">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Native Axios Support in JavaScript Environments - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/native-axios-support-in-java-script-environments" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines whether any development runtime or platform supports the Axios HTTP client natively out of the box. It clarifies the distinction between standard JavaScript execution environments and Axios as a third-party dependency, detailing why" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="native-axios-support-in-javascript-environments">Native Axios
+Support in JavaScript Environments</h1>
+<p>This article examines whether any development runtime or platform
+supports the Axios HTTP client natively out of the box. It clarifies the
+distinction between standard JavaScript execution environments and Axios
+as a third-party dependency, detailing why installation is required
+across standard runtimes and highlighting specialized cloud sandboxes
+where Axios is pre-bundled for immediate use.</p>
+<h2 id="the-short-answer-no-native-runtime-support">The Short Answer: No
+Native Runtime Support</h2>
+<p>Axios is a third-party, open-source library distributed via package
+managers like npm and content delivery networks (CDNs). Because it is
+not an official ECMAScript or W3C web standard, <strong>no standard
+JavaScript runtime natively bundles Axios as a built-in global
+module.</strong></p>
+<p>Standard environments rely on their own native HTTP implementations
+rather than shipping with Axios pre-installed:</p>
+<ul>
+<li><strong>Web Browsers:</strong> Provide native HTTP handling through
+the <code>fetch()</code> API and the legacy <code>XMLHttpRequest</code>
+object. Axios must be imported via a <code>&lt;script&gt;</code> tag or
+bundled using tools like Vite, Webpack, or Rollup.</li>
+<li><strong>Node.js:</strong> Includes native networking through the
+core <code>http</code>, <code>https</code>, and <code>http2</code>
+modules, as well as a native global <code>fetch()</code> implementation
+(Node.js 18+). Using Axios in Node.js requires explicitly installing it
+via <code>npm install axios</code> or equivalent package managers
+(<code>yarn</code>, <code>pnpm</code>).</li>
+<li><strong>Deno:</strong> Implements standard web APIs, including a
+built-in <code>fetch()</code>. While Deno can import Axios directly
+without prior manual installation via npm specifiers
+(<code>import axios from "npm:axios"</code>), it does not provide Axios
+as an inherent, built-in global.</li>
+<li><strong>Bun:</strong> Comes with a high-performance native
+<code>fetch()</code> implementation. Like Node.js, running Axios in Bun
+requires installing it via <code>bun add axios</code>.</li>
+</ul>
+<h2 id="platforms-and-sandboxes-with-pre-loaded-axios">Platforms and
+Sandboxes with Pre-Loaded Axios</h2>
+<p>While core language engines do not feature Axios out of the box,
+several online execution environments, low-code platforms, and
+serverless workflows provide Axios pre-installed in their runtime
+containers:</p>
+<h3 id="1-integration-and-automation-platforms">1. Integration and
+Automation Platforms</h3>
+<ul>
+<li><strong>Pipedream:</strong> Includes Axios by default within its
+Node.js code steps, allowing developers to import and use
+<code>axios</code> without configuring a <code>package.json</code>
+file.</li>
+<li><strong>Zapier (Code by Zapier):</strong> Pre-bundles common HTTP
+utilities, including Axios, in its JavaScript execution
+environment.</li>
+<li><strong>Make (formerly Integromat):</strong> Custom webhook and app
+structures often expose Axios-backed HTTP modules natively within custom
+apps.</li>
+</ul>
+<h3 id="2-interactive-sandboxes-and-repls">2. Interactive Sandboxes and
+REPLs</h3>
+<ul>
+<li><strong>RunKit:</strong> Automatically resolves and loads Axios upon
+declaration (<code>const axios = require('axios')</code>) without
+requiring manual package management.</li>
+<li><strong>StackBlitz and CodeSandbox:</strong> While technically
+downloading dependencies on demand, their Node.js and browser templates
+automatically configure and resolve Axios when specified in starter
+environments.</li>
+</ul>
+<h2 id="choosing-between-native-fetch-and-axios">Choosing Between Native
+Fetch and Axios</h2>
+<p>If your goal is to write code that runs strictly "out of the box" in
+any modern browser, Node.js 18+, Deno, or Bun without adding external
+dependencies, the native <code>fetch()</code> API is the standard
+solution.</p>
+<p>If you require features unique to Axios—such as automatic JSON data
+transformation, request and response interceptors, automatic request
+cancellation via timeouts, and wide backwards compatibility—you must add
+Axios as an external dependency to your project.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

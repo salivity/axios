@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Redirects in Node.js vs Browser - axios</title>
+    <meta name="description" content="Axios handles HTTP redirects fundamentally differently depending on whether it executes in a web browser or a Node.js runtime. In Node.js, Axios provides full programmatic control to configure, limit, or disable redirects using built-in options. In contr">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-redirects-in-node-js-vs-browser">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Redirects in Node.js vs Browser - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-redirects-in-node-js-vs-browser" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios handles HTTP redirects fundamentally differently depending on whether it executes in a web browser or a Node.js runtime. In Node.js, Axios provides full programmatic control to configure, limit, or disable redirects using built-in options. In contr" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-redirects-in-nodejs-vs-browser">Axios Redirects in Node.js
+vs Browser</h1>
+<p>Axios handles HTTP redirects fundamentally differently depending on
+whether it executes in a web browser or a Node.js runtime. In Node.js,
+Axios provides full programmatic control to configure, limit, or disable
+redirects using built-in options. In contrast, browser environments
+enforce strict security specifications that handle redirects
+transparently at the browser engine level, preventing client-side
+JavaScript from altering redirect behavior.</p>
+<h3 id="redirect-handling-in-the-browser">Redirect Handling in the
+Browser</h3>
+<p>When running in a browser, Axios relies on the native
+<code>XMLHttpRequest</code> (XHR) or <code>fetch</code> APIs. According
+to the W3C XMLHttpRequest and Fetch specifications, HTTP redirects (such
+as status codes 301, 302, 303, 307, and 308) must be followed
+automatically by the browser.</p>
+<p>Key characteristics in the browser include:</p>
+<ul>
+<li><strong>No Programmatic Control:</strong> Developers cannot disable
+redirects, modify redirect limits, or intercept intermediate 3xx
+response headers.</li>
+<li><strong>Ignored Configurations:</strong> The Axios
+<code>maxRedirects</code> option is completely ignored because
+JavaScript cannot override native browser networking constraints.</li>
+<li><strong>Transparent Final Response:</strong> The application only
+receives the final response payload and status code (e.g., 200 OK) once
+the entire redirect chain has completed.</li>
+<li><strong>CORS Restrictions:</strong> If a redirect points to a
+different origin, the destination server must include proper
+Cross-Origin Resource Sharing (CORS) headers, or the browser will block
+the request.</li>
+</ul>
+<h3 id="redirect-handling-in-nodejs">Redirect Handling in Node.js</h3>
+<p>In a Node.js environment, Axios uses the native <code>http</code> and
+<code>https</code> modules along with the <code>follow-redirects</code>
+library. Because Node.js operates outside browser sandbox constraints,
+Axios can intercept, manage, and modify how redirects are processed.</p>
+<p>Key characteristics in Node.js include:</p>
+<ul>
+<li><strong>Configurable Limits (<code>maxRedirects</code>):</strong>
+Axios defaults to allowing up to 21 redirects. If a redirect chain
+exceeds this number, Axios rejects the promise with a
+<code>MaxRedirectsError</code>.</li>
+<li><strong>Disabling Redirects:</strong> You can prevent Axios from
+following redirects entirely by setting <code>maxRedirects: 0</code>.
+This allows your code to capture the raw 3xx status code and inspect the
+<code>Location</code> header manually.</li>
+<li><strong>Custom Interception (<code>beforeRedirect</code>):</strong>
+Node.js allows the use of the <code>beforeRedirect</code> callback
+option within the transport layer to inspect or alter headers before
+following the next location.</li>
+</ul>
+<h3 id="summary-comparison">Summary Comparison</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Browser Environment</th>
+<th style="text-align: left;">Node.js Environment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Underlying Mechanism</strong></td>
+<td style="text-align: left;"><code>XMLHttpRequest</code> / Fetch
+API</td>
+<td style="text-align: left;">Node <code>http</code>/<code>https</code>
+(<code>follow-redirects</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Automatic Redirects</strong></td>
+<td style="text-align: left;">Enforced by browser security</td>
+<td style="text-align: left;">Enabled by default (configurable)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>maxRedirects</code>
+Support</strong></td>
+<td style="text-align: left;">No (Ignored)</td>
+<td style="text-align: left;">Yes (Default: 21)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Ability to Disable</strong></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes (Set
+<code>maxRedirects: 0</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Intermediate Response
+Access</strong></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes (When redirects are disabled)</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

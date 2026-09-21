@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Tree Shaking in Modern Applications - axios</title>
+    <meta name="description" content="Modern JavaScript bundlers rely heavily on tree-shaking to eliminate unused code and minimize production bundle sizes, directly improving page load performance. This article analyzes how tree-shaking interacts with the Axios HTTP client in modern web app">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-tree-shaking-in-modern-applications">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Tree Shaking in Modern Applications - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-tree-shaking-in-modern-applications" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Modern JavaScript bundlers rely heavily on tree-shaking to eliminate unused code and minimize production bundle sizes, directly improving page load performance. This article analyzes how tree-shaking interacts with the Axios HTTP client in modern web app" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-tree-shaking-in-modern-applications">Axios Tree Shaking in
+Modern Applications</h1>
+<p>Modern JavaScript bundlers rely heavily on tree-shaking to eliminate
+unused code and minimize production bundle sizes, directly improving
+page load performance. This article analyzes how tree-shaking interacts
+with the Axios HTTP client in modern web applications, detailing why
+traditional Axios architectures resist dead-code elimination, the
+bundle-size implications of this limitation, and practical strategies
+developers can use to optimize network-heavy frontends.</p>
+<h2 id="the-challenge-of-tree-shaking-axios">The Challenge of
+Tree-Shaking Axios</h2>
+<p>Tree-shaking relies on the static analysis of ES modules
+(<code>import</code> and <code>export</code> statements) to detect and
+remove unreferenced code during the build process. When a library
+exposes discrete, modular functions, bundlers like Webpack, Rollup, and
+Vite can easily discard the functions an application never imports.</p>
+<p>Axios, however, was historically designed as a monolithic,
+class-based client. When an application imports Axios—even just for a
+single <code>axios.get()</code> request—it imports the entire instance,
+along with its internal interceptor pipeline, defaults management,
+transformation pipelines, and both browser (<code>XMLHttpRequest</code>)
+and Node.js (<code>http</code>/<code>https</code>) adapter
+architectures. Because the core API attaches convenience methods
+directly to the Axios prototype and instance object, static analysis
+tools cannot safely determine which methods or internal mechanisms are
+strictly unnecessary, forcing bundlers to include the full library in
+the final JavaScript bundle.</p>
+<h2 id="dual-platform-architecture-and-bundle-overhead">Dual-Platform
+Architecture and Bundle Overhead</h2>
+<p>A key strength of Axios is its isomorphic capability: it runs
+seamlessly in both browser and Node.js environments using the same API.
+However, this design creates challenges for browser-targeted
+bundling:</p>
+<ul>
+<li><strong>Adapter Inclusions:</strong> Even with modern conditional
+exports, legacy packaging patterns or misconfigured bundlers can bundle
+unnecessary platform logic or require polyfills.</li>
+<li><strong>Monolithic Instances:</strong> Functions like
+<code>axios.create()</code>, request/response interceptors, and custom
+transformers are tightly bound to the central export, meaning they are
+included whether your application uses them or not.</li>
+<li><strong>Baseline Weight:</strong> The minified and gzipped footprint
+of Axios sits at roughly 11 KB to 13 KB. While modest on its own, it is
+an immovable baseline that cannot be reduced via tree-shaking.</li>
+</ul>
+<h2 id="improvements-in-axios-1x">Improvements in Axios 1.x</h2>
+<p>Recent major versions of Axios introduced native ECMAScript Module
+(ESM) support and explicit <code>exports</code> field definitions in
+<code>package.json</code>. These updates resolved long-standing module
+resolution bugs and improved compatibility with modern toolchains like
+Vite and esbuild.</p>
+<p>Despite these improvements, the underlying architectural pattern
+remains centered around the unified <code>Axios</code> class and default
+export. Consequently, the actual reduction in bundle size achievable
+through tree-shaking remains minimal compared to purely modular,
+functional libraries.</p>
+<h2 id="alternatives-and-optimization-strategies">Alternatives and
+Optimization Strategies</h2>
+<p>For performance-critical applications prioritizing lean client-side
+bundles, several alternatives provide better tree-shaking
+characteristics or smaller footprints:</p>
+<ul>
+<li><strong>Native <code>fetch</code> API:</strong> Modern browsers
+natively support <code>fetch</code>, introducing zero bytes to the
+JavaScript bundle while supporting abort signals, streaming, and modern
+promise-based workflows.</li>
+<li><strong>Lightweight Wrappers:</strong> Libraries such as
+<code>ky</code> (built on <code>fetch</code>) offer ergonomics similar
+to Axios (including interceptors, retry handling, and automatic JSON
+parsing) while maintaining a smaller footprint.</li>
+<li><strong>Drop-in Replacements:</strong> Utilities like
+<code>redaxios</code> replicate the Axios API entirely while delegating
+the underlying network requests to the browser's native
+<code>fetch</code>, reducing the footprint to under 1 KB.</li>
+</ul>
+<p>If an application requires advanced Axios features—such as automatic
+upload/download progress events or legacy browser support—the library
+remains a dependable choice. However, engineering teams must recognize
+that Axios functions as an all-or-nothing dependency, and its footprint
+cannot be trimmed through standard tree-shaking mechanisms.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

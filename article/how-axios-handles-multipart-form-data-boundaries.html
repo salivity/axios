@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Handles Multipart Form Data Boundaries - axios</title>
+    <meta name="description" content="This article explains how the Axios HTTP client automatically generates, manages, and attaches boundary strings for multipart/form-data requests across both browser and Node.js environments. You will learn the mechanics behind automatic boundary generati">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-handles-multipart-form-data-boundaries">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Handles Multipart Form Data Boundaries - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-handles-multipart-form-data-boundaries" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the Axios HTTP client automatically generates, manages, and attaches boundary strings for multipart/form-data requests across both browser and Node.js environments. You will learn the mechanics behind automatic boundary generati" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-handles-multipart-form-data-boundaries">How Axios
+Handles Multipart Form Data Boundaries</h1>
+<p>This article explains how the Axios HTTP client automatically
+generates, manages, and attaches boundary strings for
+<code>multipart/form-data</code> requests across both browser and
+Node.js environments. You will learn the mechanics behind automatic
+boundary generation, how Axios detects payload types, and why manual
+header configuration often causes multipart upload failures.</p>
+<h2 id="understanding-the-multipart-boundary">Understanding the
+Multipart Boundary</h2>
+<p>When uploading files or binary data alongside text fields, HTTP uses
+the <code>multipart/form-data</code> content type. To separate distinct
+fields and binary streams within a single HTTP request body, the client
+defines a unique delimiter string known as a "boundary."</p>
+<p>A typical multipart header looks like this:</p>
+<pre class="http"><code>Content-Type: multipart/form-data; boundary=---------------------------974767299852498929531610575</code></pre>
+<p>The receiving server relies on this exact boundary string to split
+and parse incoming fields and files. If the boundary in the header is
+missing, corrupted, or does not match the delimiters in the request
+body, the server cannot parse the payload.</p>
+<h2 id="how-axios-handles-boundaries-in-the-browser">How Axios Handles
+Boundaries in the Browser</h2>
+<p>In browser environments, Axios delegates boundary generation to the
+browser's underlying network stack (<code>XMLHttpRequest</code> or
+<code>Fetch API</code>).</p>
+<ol type="1">
+<li><strong>Payload Detection:</strong> When you pass a native
+<code>FormData</code> instance as the request <code>data</code>, Axios
+identifies the object type using internal adapter checks.</li>
+<li><strong>Header Omission:</strong> Axios intentionally removes or
+avoids setting a static
+<code>'Content-Type': 'multipart/form-data'</code> header.</li>
+<li><strong>Browser Assignment:</strong> When the browser sends the
+native <code>FormData</code> object, it automatically generates a
+cryptographically random boundary string and appends it to the
+<code>Content-Type</code> header (e.g.,
+<code>multipart/form-data; boundary=----WebKitFormBoundary...</code>).</li>
+</ol>
+<p>Because Axios leaves the <code>Content-Type</code> unset for browser
+<code>FormData</code>, the browser handles both body serialization and
+boundary assignment synchronously without manual intervention.</p>
+<h2 id="how-axios-handles-boundaries-in-nodejs">How Axios Handles
+Boundaries in Node.js</h2>
+<p>Node.js lacks a built-in browser network layer, requiring explicit
+stream and boundary management. Axios handles this through environment
+adapters and automatic serialization:</p>
+<h3 id="1-using-the-form-data-package">1. Using the
+<code>form-data</code> Package</h3>
+<p>When using the third-party <code>form-data</code> library in
+Node.js:</p>
+<ul>
+<li>The library calculates a unique boundary when the form is
+instantiated.</li>
+<li>Axios detects the custom form stream and extracts the headers by
+calling the object's <code>getHeaders()</code> method.</li>
+<li>Axios applies these headers—including
+<code>multipart/form-data; boundary=...</code>—directly to the outgoing
+HTTP request.</li>
+</ul>
+<h3 id="2-automatic-object-serialization-axios-v1x">2. Automatic Object
+Serialization (Axios v1.x+)</h3>
+<p>In modern Axios versions (v1.0.0 and newer), Axios includes built-in
+support for converting standard JavaScript objects into multipart
+requests automatically:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;/upload&#39;</span><span class="op">,</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">file</span><span class="op">:</span> fs<span class="op">.</span><span class="fu">createReadStream</span>(<span class="st">&#39;document.pdf&#39;</span>)<span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">description</span><span class="op">:</span> <span class="st">&#39;Annual Report&#39;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>}<span class="op">,</span> {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;multipart/form-data&#39;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>When Axios detects this configuration in Node.js, its internal
+serializer (<code>AxiosFormData</code>) constructs the multipart body,
+calculates an alphanumeric boundary string, and appends that boundary to
+the outgoing <code>Content-Type</code> header automatically.</p>
+<h2 id="the-common-pitfall-manual-header-overrides">The Common Pitfall:
+Manual Header Overrides</h2>
+<p>The most frequent error when sending multipart data with Axios is
+explicitly defining the <code>Content-Type</code> header without a
+boundary:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Incorrect: Removes the automatically generated boundary</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>headers<span class="op">:</span> {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;multipart/form-data&#39;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Setting this manually overwrites the dynamically generated header,
+stripping away the <code>boundary=...</code> parameter. As a result, the
+server receives raw multipart delimiters in the body but has no boundary
+reference in the headers to parse them, leading to empty payloads or
+<code>400 Bad Request</code> errors.</p>
+<p>To allow Axios to process multipart boundaries automatically:</p>
+<ul>
+<li><strong>In the browser:</strong> Pass a native <code>FormData</code>
+object and omit the <code>Content-Type</code> header entirely.</li>
+<li><strong>In Node.js (v1.x+):</strong> Pass your data object and let
+Axios manage serialization, or pass <code>form.getHeaders()</code> when
+using external form libraries.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

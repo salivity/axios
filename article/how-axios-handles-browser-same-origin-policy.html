@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Handles Browser Same-Origin Policy - axios</title>
+    <meta name="description" content="Axios is a popular promise-based HTTP client for JavaScript, but it does not have the ability to bypass or override native browser security models. This article explores how Axios interacts with browser-level security restrictions like the Same-Origin Po">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-handles-browser-same-origin-policy">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Handles Browser Same-Origin Policy - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-handles-browser-same-origin-policy" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios is a popular promise-based HTTP client for JavaScript, but it does not have the ability to bypass or override native browser security models. This article explores how Axios interacts with browser-level security restrictions like the Same-Origin Po" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-handles-browser-same-origin-policy">How Axios Handles
+Browser Same-Origin Policy</h1>
+<p>Axios is a popular promise-based HTTP client for JavaScript, but it
+does not have the ability to bypass or override native browser security
+models. This article explores how Axios interacts with browser-level
+security restrictions like the Same-Origin Policy (SOP), how it operates
+under Cross-Origin Resource Sharing (CORS), and the built-in
+configuration options Axios provides to manage security headers,
+credentials, and Cross-Site Request Forgery (CSRF) protection.</p>
+<h2 id="the-browser-enforces-the-same-origin-policy-not-axios">The
+Browser Enforces the Same-Origin Policy, Not Axios</h2>
+<p>The Same-Origin Policy is a fundamental security mechanism enforced
+entirely by the web browser, not by client-side JavaScript libraries.
+When running in a browser environment, Axios uses the native
+<code>XMLHttpRequest</code> interface under the hood.</p>
+<p>Because Axios relies on native browser APIs to dispatch network
+requests, it is fully subject to all browser security constraints. Axios
+cannot arbitrarily disable the Same-Origin Policy, ignore CORS errors,
+or access response data that the browser blocks for security
+reasons.</p>
+<h2 id="handling-cross-origin-requests-with-cors">Handling Cross-Origin
+Requests with CORS</h2>
+<p>To make requests across different domains, protocols, or ports, Axios
+depends on Cross-Origin Resource Sharing (CORS). CORS is a server-driven
+mechanism that informs the browser whether a cross-origin request is
+permitted.</p>
+<p>When Axios makes a cross-origin request:</p>
+<ol type="1">
+<li><strong>Simple Requests:</strong> If the request meets certain
+criteria (e.g., standard <code>GET</code> or <code>POST</code> methods
+with basic headers), the browser sends it directly and inspects the
+response for the <code>Access-Control-Allow-Origin</code> header. If the
+header is missing or does not match the requesting origin, the browser
+blocks Axios from reading the response and throws a network error.</li>
+<li><strong>Preflight Requests:</strong> For requests with custom
+headers, non-standard methods (like <code>PUT</code> or
+<code>DELETE</code>), or specific content types like
+<code>application/json</code>, the browser automatically sends an HTTP
+<code>OPTIONS</code> preflight request before Axios's actual request. If
+the server does not explicitly permit the origin, method, or headers,
+the browser cancels the subsequent Axios request.</li>
+</ol>
+<p>Because CORS headers must be sent by the server, resolving
+CORS-related failures in Axios requires server-side configuration or the
+use of a backend reverse proxy during development.</p>
+<h2 id="sending-credentials-and-cookies">Sending Credentials and
+Cookies</h2>
+<p>By default, the browser does not send ambient credentials—such as
+cookies, HTTP authentication, or client-side SSL certificates—with
+cross-origin requests initiated by Axios.</p>
+<p>To instruct the browser to include credentials in cross-origin
+requests, Axios provides the <code>withCredentials</code> option:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/data&#39;</span><span class="op">,</span> {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">withCredentials</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>When this flag is enabled, the target server must respond with the
+header <code>Access-Control-Allow-Credentials: true</code> and a
+specific <code>Access-Control-Allow-Origin</code> value (wildcard
+<code>*</code> is not permitted when credentials are included). If these
+conditions are not met, the browser will block the response from
+reaching Axios.</p>
+<h2 id="built-in-cross-site-request-forgery-csrf-protection">Built-In
+Cross-Site Request Forgery (CSRF) Protection</h2>
+<p>While Axios cannot alter the Same-Origin Policy, it includes native
+utilities to help defend against Cross-Site Request Forgery (CSRF) when
+interacting with compliant backends.</p>
+<p>Axios automatically reads a token stored in a specific cookie and
+attaches it as an HTTP header on subsequent requests. By default, it
+looks for:</p>
+<ul>
+<li><strong>Cookie Name:</strong> <code>XSRF-TOKEN</code></li>
+<li><strong>Header Name:</strong> <code>X-XSRF-TOKEN</code></li>
+</ul>
+<p>You can customize these defaults using the Axios configuration:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> instance <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">xsrfCookieName</span><span class="op">:</span> <span class="st">&#39;CUSTOM-CSRF-COOKIE&#39;</span><span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">xsrfHeaderName</span><span class="op">:</span> <span class="st">&#39;X-CUSTOM-CSRF-HEADER&#39;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Because the Same-Origin Policy prevents unauthorized domains from
+reading cookies set by your domain, attackers cannot access the CSRF
+cookie to forge valid requests.</p>
+<h2 id="browser-vs-nodejs-environment">Browser vs. Node.js
+Environment</h2>
+<p>The Same-Origin Policy is strictly a browser concept designed to
+protect end-users from malicious scripts. When Axios is executed in a
+server environment like Node.js, it uses native Node HTTP/HTTPS modules
+instead of the browser's <code>XMLHttpRequest</code>. In Node.js, the
+Same-Origin Policy does not exist, and Axios can make requests to any
+origin without CORS restrictions.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

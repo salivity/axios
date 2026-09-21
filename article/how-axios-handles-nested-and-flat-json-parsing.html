@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Handles Nested and Flat JSON Parsing - axios</title>
+    <meta name="description" content="The Axios HTTP client simplifies API data retrieval by automatically transforming JSON response payloads into native JavaScript objects. Regardless of whether an API returns a flat key-value structure or a deeply nested JSON hierarchy, Axios handles the">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-handles-nested-and-flat-json-parsing">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Handles Nested and Flat JSON Parsing - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-handles-nested-and-flat-json-parsing" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The Axios HTTP client simplifies API data retrieval by automatically transforming JSON response payloads into native JavaScript objects. Regardless of whether an API returns a flat key-value structure or a deeply nested JSON hierarchy, Axios handles the" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-handles-nested-and-flat-json-parsing">How Axios
+Handles Nested and Flat JSON Parsing</h1>
+<p>The Axios HTTP client simplifies API data retrieval by automatically
+transforming JSON response payloads into native JavaScript objects.
+Regardless of whether an API returns a flat key-value structure or a
+deeply nested JSON hierarchy, Axios handles the parsing process
+uniformly out of the box. This article explains how Axios processes both
+flat and nested JSON payloads, the underlying mechanics, and key
+considerations when handling different data depths.</p>
+<h3 id="the-underlying-parsing-mechanism">The Underlying Parsing
+Mechanism</h3>
+<p>Axios does not differentiate between flat and nested JSON at the
+network or parsing level. When an HTTP response is received with a
+<code>Content-Type</code> header of <code>application/json</code>, Axios
+executes its default <code>transformResponse</code> function. This
+transformer internally calls JavaScript's native
+<code>JSON.parse()</code>.</p>
+<p>Because native <code>JSON.parse()</code> recursively processes
+strings into full object trees, Axios inherently supports any valid JSON
+schema, regardless of depth. The resulting data is made accessible
+directly via the <code>response.data</code> property.</p>
+<h3 id="parsing-flat-json-structures">Parsing Flat JSON Structures</h3>
+<p>A flat JSON structure contains single-level key-value pairs without
+nested objects or arrays:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;id&quot;</span><span class="fu">:</span> <span class="dv">101</span><span class="fu">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;username&quot;</span><span class="fu">:</span> <span class="st">&quot;johndoe&quot;</span><span class="fu">,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;status&quot;</span><span class="fu">:</span> <span class="st">&quot;active&quot;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>When Axios receives this response, it parses the string into a
+single-layer JavaScript object. Accessing properties is
+straightforward:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/api/user&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(response<span class="op">.</span><span class="at">data</span><span class="op">.</span><span class="at">username</span>)<span class="op">;</span> <span class="co">// &quot;johndoe&quot;</span></span></code></pre></div>
+<p>Flat structures require minimal memory allocation and execute parsing
+with optimal performance, as no recursive tree traversal is
+required.</p>
+<h3 id="parsing-nested-json-structures">Parsing Nested JSON
+Structures</h3>
+<p>Nested JSON contains objects, arrays, or both within child
+properties:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;id&quot;</span><span class="fu">:</span> <span class="dv">101</span><span class="fu">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;profile&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;first&quot;</span><span class="fu">:</span> <span class="st">&quot;John&quot;</span><span class="fu">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;last&quot;</span><span class="fu">:</span> <span class="st">&quot;Doe&quot;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">},</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;roles&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;admin&quot;</span><span class="ot">,</span> <span class="st">&quot;editor&quot;</span><span class="ot">]</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Axios processes this structure using the exact same
+<code>JSON.parse()</code> step. The parser traverses the entire
+hierarchy and generates nested object and array references in
+memory:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/api/user/profile&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(response<span class="op">.</span><span class="at">data</span><span class="op">.</span><span class="at">profile</span><span class="op">.</span><span class="at">name</span><span class="op">.</span><span class="at">first</span>)<span class="op">;</span> <span class="co">// &quot;John&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(response<span class="op">.</span><span class="at">data</span><span class="op">.</span><span class="at">profile</span><span class="op">.</span><span class="at">roles</span>[<span class="dv">0</span>])<span class="op">;</span>    <span class="co">// &quot;admin&quot;</span></span></code></pre></div>
+<h3 id="key-differences-and-considerations">Key Differences and
+Considerations</h3>
+<p>While Axios treats flat and nested JSON identically during parsing,
+handling them in an application introduces practical differences:</p>
+<ul>
+<li><strong>Safety and Access</strong>: Deeply nested properties run the
+risk of <code>TypeError</code> exceptions if intermediate keys are
+<code>null</code> or <code>undefined</code>. Utilizing optional chaining
+(<code>response.data?.profile?.name?.first</code>) is recommended for
+nested structures.</li>
+<li><strong>Performance and Memory</strong>: Extremely large and deeply
+nested JSON objects take longer to parse recursively and consume more
+heap memory than flat equivalents.</li>
+<li><strong>Custom Transformations</strong>: If an application requires
+a flat structure from a nested API response, custom transformation logic
+can be injected via the <code>transformResponse</code> configuration
+option:</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/api/user/profile&#39;</span><span class="op">,</span> {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transformResponse</span><span class="op">:</span> [</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">transformResponse</span><span class="op">,</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    (data) <span class="kw">=&gt;</span> ({</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">id</span><span class="op">:</span> data<span class="op">.</span><span class="at">id</span><span class="op">,</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">firstName</span><span class="op">:</span> data<span class="op">.</span><span class="at">profile</span><span class="op">.</span><span class="at">name</span><span class="op">.</span><span class="at">first</span><span class="op">,</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">role</span><span class="op">:</span> data<span class="op">.</span><span class="at">profile</span><span class="op">.</span><span class="at">roles</span>[<span class="dv">0</span>]</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  ]</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Axios provides seamless, zero-configuration parsing for both flat and
+nested JSON by delegating the serialization workload to the JavaScript
+runtime's native JSON parser.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

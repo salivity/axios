@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding the Axios env Config Property - axios</title>
+    <meta name="description" content="The env configuration property in Axios allows developers to explicitly define or override runtime-specific global objects, such as FormData and Blob. This article explains the core purpose of the env setting, why it is critical for cross-platform JavaSc">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/understanding-the-axios-env-config-property">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding the Axios env Config Property - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/understanding-the-axios-env-config-property" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The env configuration property in Axios allows developers to explicitly define or override runtime-specific global objects, such as FormData and Blob. This article explains the core purpose of the env setting, why it is critical for cross-platform JavaSc" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="understanding-the-axios-env-config-property">Understanding the
+Axios env Config Property</h1>
+<p>The <code>env</code> configuration property in Axios allows
+developers to explicitly define or override runtime-specific global
+objects, such as <code>FormData</code> and <code>Blob</code>. This
+article explains the core purpose of the <code>env</code> setting, why
+it is critical for cross-platform JavaScript development—especially in
+Node.js and testing environments—and how to implement it directly in
+your Axios request or instance configurations.</p>
+<hr />
+<h3 id="what-is-the-env-configuration-property">What Is the
+<code>env</code> Configuration Property?</h3>
+<p>Axios is an isomorphic HTTP client, meaning it can run seamlessly in
+both browser environments and Node.js. However, standard web APIs like
+<code>FormData</code> and <code>Blob</code> are not always available
+globally or handled consistently across every environment.</p>
+<p>The <code>env</code> configuration option provides a dedicated
+mechanism to inject specific implementations of these objects directly
+into Axios without mutating the global runtime scope
+(<code>window</code> or <code>globalThis</code>).</p>
+<h3 id="available-properties-in-env">Available Properties in
+<code>env</code></h3>
+<p>The <code>env</code> object accepts specific properties that Axios
+relies on when processing request payloads:</p>
+<ul>
+<li><strong><code>FormData</code></strong>: Specifies a custom or
+polyfilled <code>FormData</code> class used to serialize
+multipart/form-data requests.</li>
+<li><strong><code>Blob</code></strong>: Specifies a custom or polyfilled
+<code>Blob</code> class used when creating binary objects.</li>
+</ul>
+<h3 id="primary-use-cases">Primary Use Cases</h3>
+<h4 id="1-nodejs-form-data-handling">1. Node.js Form Data Handling</h4>
+<p>In Node.js versions lacking a built-in <code>FormData</code>
+implementation, sending multipart form data requires a third-party
+package like <code>form-data</code>. By setting
+<code>env.FormData</code>, you instruct Axios to use this specific
+package for encoding requests.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="bu">FormData</span> <span class="im">from</span> <span class="st">&#39;form-data&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> client <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com&#39;</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">env</span><span class="op">:</span> {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">FormData</span><span class="op">:</span> <span class="bu">FormData</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h4 id="2-isolated-testing-and-mocking">2. Isolated Testing and
+Mocking</h4>
+<p>During unit and integration tests, you might want to mock the
+behavior of <code>FormData</code> or <code>Blob</code> for specific test
+cases. Passing these mocks through the <code>env</code> configuration
+prevents cross-contamination across tests because you do not need to
+override global variables.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { MockFormData } <span class="im">from</span> <span class="st">&#39;./mocks&#39;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;https://api.example.com/upload&#39;</span><span class="op">,</span> data<span class="op">,</span> {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">env</span><span class="op">:</span> {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">FormData</span><span class="op">:</span> MockFormData</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h4 id="3-custom-and-specialized-runtimes">3. Custom and Specialized
+Runtimes</h4>
+<p>In environments like Web Workers, React Native, or custom embedded
+JavaScript runtimes, global APIs may be restricted or have distinct
+implementations. The <code>env</code> property allows you to supply the
+exact polyfills required by your execution target.</p>
+<h3 id="summary">Summary</h3>
+<p>The <code>env</code> property gives you fine-grained control over the
+internal environment dependencies of Axios. It ensures that file
+uploads, binary streams, and form submissions function reliably across
+diverse JavaScript runtimes without relying on global scope
+manipulation.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

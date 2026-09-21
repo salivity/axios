@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Handles Chunked Transfer Encoding - axios</title>
+    <meta name="description" content="This article provides an overview of how the Axios HTTP client processes HTTP responses that use chunked transfer encoding (Transfer-Encoding: chunked). It details the default behavior of Axios across different runtime environments—Node.js and the brow">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-handles-chunked-transfer-encoding">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Handles Chunked Transfer Encoding - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-handles-chunked-transfer-encoding" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of how the Axios HTTP client processes HTTP responses that use chunked transfer encoding (Transfer-Encoding: chunked). It details the default behavior of Axios across different runtime environments—Node.js and the brow" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-handles-chunked-transfer-encoding">How Axios Handles
+Chunked Transfer Encoding</h1>
+<p>This article provides an overview of how the Axios HTTP client
+processes HTTP responses that use chunked transfer encoding
+(<code>Transfer-Encoding: chunked</code>). It details the default
+behavior of Axios across different runtime environments—Node.js and the
+browser—explains how data is buffered versus streamed, and demonstrates
+how to handle streaming data efficiently without running into memory
+bottlenecks.</p>
+<h2 id="default-behavior-response-buffering">Default Behavior: Response
+Buffering</h2>
+<p>By default, Axios automatically buffers chunked responses. When a
+server responds with <code>Transfer-Encoding: chunked</code> without a
+predefined <code>Content-Length</code> header, Axios listens for
+incoming data chunks, stitches them together in memory, and resolves the
+promise only after the entire response stream has finished.</p>
+<p>For standard configurations (such as
+<code>responseType: 'json'</code> or <code>responseType: 'text'</code>),
+<code>response.data</code> will contain the fully assembled and parsed
+payload rather than individual chunks.</p>
+<h2 id="behavior-in-nodejs">Behavior in Node.js</h2>
+<p>In a Node.js environment, Axios relies on the native
+<code>http</code> and <code>https</code> modules.</p>
+<h3 id="1-default-mode-buffered">1. Default Mode (Buffered)</h3>
+<p>Axios accumulates all chunks emitted by the underlying
+<code>http.IncomingMessage</code> stream. Once the stream ends, it
+formats the result based on the specified <code>responseType</code> and
+resolves the request promise.</p>
+<h3 id="2-streaming-mode-responsetype-stream">2. Streaming Mode
+(<code>responseType: 'stream'</code>)</h3>
+<p>To process chunks in real time as they arrive from the server, you
+must set the <code>responseType</code> configuration to
+<code>'stream'</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">downloadStream</span>() {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> <span class="fu">axios</span>({</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">method</span><span class="op">:</span> <span class="st">&#39;get&#39;</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">url</span><span class="op">:</span> <span class="st">&#39;https://example.com/large-chunked-data&#39;</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">responseType</span><span class="op">:</span> <span class="st">&#39;stream&#39;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// response.data is a readable stream</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  response<span class="op">.</span><span class="at">data</span><span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;data&#39;</span><span class="op">,</span> (chunk) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Received chunk: </span><span class="sc">${</span>chunk<span class="op">.</span><span class="at">length</span><span class="sc">}</span><span class="vs"> bytes`</span>)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  response<span class="op">.</span><span class="at">data</span><span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;end&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Stream finished.&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Using <code>'stream'</code> prevents high memory consumption when
+handling large payloads, such as video streams or massive datasets.</p>
+<h2 id="behavior-in-the-browser">Behavior in the Browser</h2>
+<p>In the browser, Axios predominantly relies on the
+<code>XMLHttpRequest</code> (XHR) API, though newer configurations can
+use the Fetch API adapter.</p>
+<ul>
+<li><strong>XMLHttpRequest:</strong> Standard XHR does not support full
+readable streams. Axios waits until <code>readyState === 4</code> (the
+transfer is complete) before resolving the response promise, buffering
+the entire chunked payload in browser memory.</li>
+<li><strong>Fetch Adapter:</strong> When configured to use the modern
+Fetch API adapter with ReadableStreams, Axios can expose
+browser-compatible streams, but the default distribution still behaves
+synchronously with respect to promise resolution for standard response
+types.</li>
+</ul>
+<h2 id="important-considerations">Important Considerations</h2>
+<ul>
+<li><strong>Memory Usage:</strong> Buffering large chunked responses in
+default mode can cause high memory usage or out-of-memory errors in both
+Node.js and browser environments.</li>
+<li><strong>Timeouts:</strong> The Axios <code>timeout</code> setting
+applies to the entire request lifecycle. If a chunked response streams
+slowly over a prolonged period, the request may trigger a timeout unless
+the timeout value is explicitly disabled or increased.</li>
+<li><strong>Error Handling:</strong> If the connection terminates
+prematurely before the final zero-length chunk is received, Axios will
+reject the promise or emit an error on the stream, flagging an
+incomplete or malformed transfer.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

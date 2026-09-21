@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AxiosError vs JavaScript Error: Key Distinctions - axios</title>
+    <meta name="description" content="When handling network requests in Axios, a standard JavaScript Error object lacks the HTTP-specific metadata needed to diagnose network failures and handle API responses effectively. Axios solves this by throwing an AxiosError, a specialized subclass of">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-error-vs-java-script-error-key-distinctions">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="AxiosError vs JavaScript Error: Key Distinctions - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-error-vs-java-script-error-key-distinctions" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When handling network requests in Axios, a standard JavaScript Error object lacks the HTTP-specific metadata needed to diagnose network failures and handle API responses effectively. Axios solves this by throwing an AxiosError, a specialized subclass of" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axioserror-vs-javascript-error-key-distinctions">AxiosError vs
+JavaScript Error: Key Distinctions</h1>
+<p>When handling network requests in Axios, a standard JavaScript
+<code>Error</code> object lacks the HTTP-specific metadata needed to
+diagnose network failures and handle API responses effectively. Axios
+solves this by throwing an <code>AxiosError</code>, a specialized
+subclass of <code>Error</code> enriched with context regarding the HTTP
+transaction. This article details the specific properties that separate
+an <code>AxiosError</code> from a generic JavaScript <code>Error</code>
+and explains how they function during runtime.</p>
+<h3 id="standard-javascript-error-properties">Standard JavaScript
+<code>Error</code> Properties</h3>
+<p>A baseline JavaScript <code>Error</code> object provides minimal
+information primarily intended for general exception handling and
+debugging:</p>
+<ul>
+<li><strong><code>name</code></strong>: The name of the error type
+(e.g., <code>"Error"</code>, <code>"TypeError"</code>).</li>
+<li><strong><code>message</code></strong>: A human-readable string
+describing the error.</li>
+<li><strong><code>stack</code></strong>: The execution stack trace
+showing where the error originated.</li>
+<li><strong><code>cause</code></strong>: An optional property in modern
+ECMAScript to store the underlying cause of the error.</li>
+</ul>
+<p>These properties provide no insight into HTTP status codes, request
+payloads, headers, or server responses.</p>
+<hr />
+<h3 id="distinguishing-properties-of-axioserror">Distinguishing
+Properties of <code>AxiosError</code></h3>
+<p>An <code>AxiosError</code> inherits the standard
+<code>message</code>, <code>name</code>, and <code>stack</code>
+properties from the base <code>Error</code> class, but adds several
+HTTP-specific properties:</p>
+<h4 id="1-isaxioserror">1. <code>isAxiosError</code></h4>
+<p>A boolean flag set to <code>true</code>. This property allows
+developers to verify whether a caught exception originated from Axios
+without relying on <code>instanceof</code> checks across different
+module contexts or realms. Axios also exposes a utility method,
+<code>axios.isAxiosError(payload)</code>, which checks for this
+property.</p>
+<h4 id="2-config">2. <code>config</code></h4>
+<p>The configuration object used to make the original HTTP request. It
+contains details such as:</p>
+<ul>
+<li><code>url</code>: The target endpoint.</li>
+<li><code>method</code>: The HTTP method (e.g., <code>'get'</code>,
+<code>'post'</code>).</li>
+<li><code>headers</code>: The request headers sent to the server.</li>
+<li><code>data</code> or <code>params</code>: The payload or query
+parameters passed into the request.</li>
+</ul>
+<h4 id="3-request">3. <code>request</code></h4>
+<p>The underlying request object that generated the network call.</p>
+<ul>
+<li>In a <strong>browser environment</strong>, this is an instance of
+<code>XMLHttpRequest</code>.</li>
+<li>In a <strong>Node.js environment</strong>, this is an instance of
+<code>http.ClientRequest</code>.</li>
+</ul>
+<p>This property is populated even if no response was received from the
+server (e.g., during network dropouts or CORS failures).</p>
+<h4 id="4-response">4. <code>response</code></h4>
+<p>An object containing the response data if the server responded with
+an HTTP status code outside the 2xx range. If the request was made but
+no response was received, this property remains <code>undefined</code>.
+When present, <code>response</code> includes:</p>
+<ul>
+<li><code>status</code>: The HTTP status code (e.g., <code>404</code>,
+<code>500</code>).</li>
+<li><code>statusText</code>: The HTTP status message returned by the
+server (e.g., <code>"Not Found"</code>).</li>
+<li><code>headers</code>: The response headers.</li>
+<li><code>data</code>: The response body returned by the API (often
+containing custom error payloads from the server).</li>
+</ul>
+<h4 id="5-code">5. <code>code</code></h4>
+<p>A standardized string error code identifying the category of the
+failure. Common examples include:</p>
+<ul>
+<li><code>ERR_NETWORK</code>: Network connection failed.</li>
+<li><code>ERR_BAD_REQUEST</code>: Received a 4xx status code.</li>
+<li><code>ERR_BAD_RESPONSE</code>: Received a 5xx status code.</li>
+<li><code>ECONNABORTED</code>: The request was aborted or timed
+out.</li>
+</ul>
+<h4 id="6-status">6. <code>status</code></h4>
+<p>Available in newer Axios releases (v1.x+), this top-level property
+mirrors the numeric HTTP status code found in
+<code>error.response.status</code>, providing direct access to the
+status code without requiring optional chaining on the
+<code>response</code> object.</p>
+<hr />
+<h3 id="summary-comparison">Summary Comparison</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Property</th>
+<th style="text-align: left;">Generic JavaScript <code>Error</code></th>
+<th style="text-align: left;"><code>AxiosError</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>message</code></td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>stack</code></td>
+<td style="text-align: left;">Yes</td>
+<td style="text-align: left;">Yes</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>isAxiosError</code></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes (<code>true</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>config</code></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes (Request configuration)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>request</code></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes (<code>XMLHttpRequest</code> /
+<code>ClientRequest</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>response</code></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes (Contains <code>data</code>,
+<code>status</code>, <code>headers</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>code</code></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes (e.g., <code>ERR_NETWORK</code>,
+<code>ERR_BAD_REQUEST</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>status</code></td>
+<td style="text-align: left;">No</td>
+<td style="text-align: left;">Yes (Numeric HTTP status code)</td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

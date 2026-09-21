@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Custom Instance Configuration Options - axios</title>
+    <meta name="description" content="Creating a custom instance in Axios using axios.create() allows developers to define reusable, centralized HTTP configurations for specific APIs or microservices. This guide provides a detailed overview of the core configuration options available when in">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-custom-instance-configuration-options">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Custom Instance Configuration Options - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-custom-instance-configuration-options" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Creating a custom instance in Axios using axios.create() allows developers to define reusable, centralized HTTP configurations for specific APIs or microservices. This guide provides a detailed overview of the core configuration options available when in" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-custom-instance-configuration-options">Axios Custom
+Instance Configuration Options</h1>
+<p>Creating a custom instance in Axios using <code>axios.create()</code>
+allows developers to define reusable, centralized HTTP configurations
+for specific APIs or microservices. This guide provides a detailed
+overview of the core configuration options available when instantiating
+a custom Axios client, covering base settings, request behavior,
+security, performance limits, and data transformation properties.</p>
+<h3 id="core-connection-settings">Core Connection Settings</h3>
+<ul>
+<li><strong><code>baseURL</code></strong>: A string representing the
+base URL prepended to any relative URL passed to request methods.
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>baseURL<span class="op">:</span> <span class="st">&#39;https://api.example.com/v1/&#39;</span></span></code></pre></div></li>
+<li><strong><code>timeout</code></strong>: The number of milliseconds
+before the request times out and aborts. If set to <code>0</code> (the
+default), no timeout is applied.
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>timeout<span class="op">:</span> <span class="dv">5000</span></span></code></pre></div></li>
+<li><strong><code>headers</code></strong>: An object containing default
+custom headers sent with every request made by the instance.
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>headers<span class="op">:</span> { <span class="st">&#39;Authorization&#39;</span><span class="op">:</span> <span class="st">&#39;Bearer token&#39;</span><span class="op">,</span> <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;application/json&#39;</span> }</span></code></pre></div></li>
+</ul>
+<h3 id="request-and-query-parameters">Request and Query Parameters</h3>
+<ul>
+<li><strong><code>params</code></strong>: Default URL query parameters
+to be appended to every request.
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>params<span class="op">:</span> { <span class="dt">api_key</span><span class="op">:</span> <span class="st">&#39;12345&#39;</span> }</span></code></pre></div></li>
+<li><strong><code>paramsSerializer</code></strong>: A custom function or
+configuration object used to serialize <code>params</code> (e.g.,
+handling array formats).
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>paramsSerializer<span class="op">:</span> { <span class="dt">indexes</span><span class="op">:</span> <span class="kw">false</span> }</span></code></pre></div></li>
+</ul>
+<h3 id="authentication-and-credentials">Authentication and
+Credentials</h3>
+<ul>
+<li><strong><code>auth</code></strong>: Automatically sets an HTTP Basic
+Authorization header using provided credentials.
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>auth<span class="op">:</span> { <span class="dt">username</span><span class="op">:</span> <span class="st">&#39;admin&#39;</span><span class="op">,</span> <span class="dt">password</span><span class="op">:</span> <span class="st">&#39;secretpassword&#39;</span> }</span></code></pre></div></li>
+<li><strong><code>withCredentials</code></strong>: A boolean indicating
+whether cross-site <code>Access-Control</code> requests should include
+credentials such as cookies, authorization headers, or TLS client
+certificates.
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>withCredentials<span class="op">:</span> <span class="kw">true</span></span></code></pre></div></li>
+</ul>
+<h3 id="data-transformations-and-encodings">Data Transformations and
+Encodings</h3>
+<ul>
+<li><strong><code>transformRequest</code></strong>: An array of
+functions allowing modifications to the request data before it is sent
+to the server.</li>
+<li><strong><code>transformResponse</code></strong>: An array of
+functions allowing modifications to the response data before it is
+passed to <code>then</code> or <code>catch</code>.</li>
+<li><strong><code>responseType</code></strong>: Defines the format of
+the data returned by the server. Options include <code>'json'</code>,
+<code>'text'</code>, <code>'blob'</code>, <code>'arraybuffer'</code>,
+<code>'document'</code>, and <code>'stream'</code>.</li>
+<li><strong><code>responseEncoding</code></strong>: Sets the encoding
+used for decoding response data (e.g., <code>'utf8'</code>).</li>
+</ul>
+<h3 id="request-control-and-validation">Request Control and
+Validation</h3>
+<ul>
+<li><strong><code>validateStatus</code></strong>: A function determining
+whether to resolve or reject the returned promise based on the HTTP
+status code.
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>validateStatus<span class="op">:</span> (status) <span class="kw">=&gt;</span> status <span class="op">&gt;=</span> <span class="dv">200</span> <span class="op">&amp;&amp;</span> status <span class="op">&lt;</span> <span class="dv">300</span></span></code></pre></div></li>
+<li><strong><code>signal</code></strong>: An <code>AbortSignal</code>
+instance generated by <code>AbortController</code> to cancel active
+requests.</li>
+<li><strong><code>proxy</code></strong>: Defines the host, port, and
+optional credentials for an HTTP proxy server.
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>proxy<span class="op">:</span> { <span class="dt">host</span><span class="op">:</span> <span class="st">&#39;127.0.0.1&#39;</span><span class="op">,</span> <span class="dt">port</span><span class="op">:</span> <span class="dv">9000</span> }</span></code></pre></div></li>
+<li><strong><code>maxContentLength</code></strong>: The maximum allowed
+size (in bytes) of the HTTP response content.</li>
+<li><strong><code>maxBodyLength</code></strong>: The maximum allowed
+size (in bytes) of the HTTP request body.</li>
+<li><strong><code>maxRedirects</code></strong>: Defines the maximum
+number of redirects to follow in Node.js (defaults to
+<code>5</code>).</li>
+</ul>
+<h3 id="example-implementation">Example Implementation</h3>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com/v1&#39;</span><span class="op">,</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">10000</span><span class="op">,</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;application/json&#39;</span><span class="op">,</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Accept&#39;</span><span class="op">:</span> <span class="st">&#39;application/json&#39;</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">withCredentials</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">validateStatus</span><span class="op">:</span> (status) <span class="kw">=&gt;</span> status <span class="op">&gt;=</span> <span class="dv">200</span> <span class="op">&amp;&amp;</span> status <span class="op">&lt;</span> <span class="dv">400</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

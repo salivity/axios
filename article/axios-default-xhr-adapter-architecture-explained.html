@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Default XHR Adapter Architecture Explained - axios</title>
+    <meta name="description" content="This article explores the role of the default XHR adapter in Axios, a core component responsible for executing HTTP requests in browser environments. You will learn how the adapter pattern enables Axios to maintain an isomorphic architecture, how the XHR">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-default-xhr-adapter-architecture-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Default XHR Adapter Architecture Explained - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-default-xhr-adapter-architecture-explained" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the role of the default XHR adapter in Axios, a core component responsible for executing HTTP requests in browser environments. You will learn how the adapter pattern enables Axios to maintain an isomorphic architecture, how the XHR" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-default-xhr-adapter-architecture-explained">Axios Default
+XHR Adapter Architecture Explained</h1>
+<p>This article explores the role of the default XHR adapter in Axios, a
+core component responsible for executing HTTP requests in browser
+environments. You will learn how the adapter pattern enables Axios to
+maintain an isomorphic architecture, how the XHR adapter translates
+Axios request configurations into native <code>XMLHttpRequest</code>
+calls, and the specific browser-level features—such as progress tracking
+and request cancellation—it manages under the hood.</p>
+<h2 id="the-role-of-adapters-in-axios">The Role of Adapters in
+Axios</h2>
+<p>Axios is an isomorphic HTTP client, meaning the exact same API can be
+used in both client-side browser environments and server-side Node.js
+applications. To achieve this without polluting the core codebase with
+environment-specific logic, Axios uses the Adapter Design Pattern.</p>
+<p>In this architecture, high-level features—such as request/response
+interceptors, automatic JSON serialization, and response transforms—are
+decoupled from the underlying network transport layer. The core of Axios
+handles the configuration and lifecycle, while an adapter handles the
+actual network dispatch.</p>
+<h2 id="what-is-the-default-xhr-adapter">What is the Default XHR
+Adapter?</h2>
+<p>The default XHR adapter (<code>axios/lib/adapters/xhr.js</code>) is
+the transport mechanism Axios invokes when running in a browser. It is
+built directly on top of the native browser <code>XMLHttpRequest</code>
+(XHR) API.</p>
+<p>When a request is initiated in a browser environment, Axios selects
+the XHR adapter by default to translate the abstract Axios request
+configuration object into an active browser-level HTTP request.</p>
+<h2 id="key-functions-of-the-xhr-adapter">Key Functions of the XHR
+Adapter</h2>
+<h3 id="1-translating-configurations-to-xmlhttprequest">1. Translating
+Configurations to <code>XMLHttpRequest</code></h3>
+<p>The adapter maps Axios configuration properties directly to
+<code>XMLHttpRequest</code> methods and properties. This includes:</p>
+<ul>
+<li>Setting the HTTP method via <code>xhr.open()</code>.</li>
+<li>Applying custom request headers using
+<code>xhr.setRequestHeader()</code>.</li>
+<li>Managing authentication credentials and cross-origin cookies via
+<code>xhr.withCredentials</code>.</li>
+<li>Setting network timeouts via <code>xhr.timeout</code>.</li>
+</ul>
+<h3 id="2-promise-resolution-and-status-handling">2. Promise Resolution
+and Status Handling</h3>
+<p>Native <code>XMLHttpRequest</code> relies on event listeners
+(<code>onload</code>, <code>onerror</code>, <code>ontimeout</code>,
+<code>onabort</code>). The XHR adapter wraps these events inside a
+JavaScript Promise:</p>
+<ul>
+<li><strong>Resolution:</strong> When <code>onload</code> fires, the
+adapter extracts the response data, status code, headers, and status
+text, packaging them into a standardized Axios response object. It then
+resolves the promise if the status code passes the
+<code>validateStatus</code> function.</li>
+<li><strong>Rejection:</strong> If the network fails
+(<code>onerror</code>), the request times out (<code>ontimeout</code>),
+or the status validation fails, the adapter generates a normalized
+<code>AxiosError</code> and rejects the promise.</li>
+</ul>
+<h3 id="3-native-progress-event-handling">3. Native Progress Event
+Handling</h3>
+<p>One of the primary reasons Axios continues to use
+<code>XMLHttpRequest</code> instead of the standard <code>fetch</code>
+API for its default browser adapter is progress monitoring. The XHR
+adapter binds directly to:</p>
+<ul>
+<li><code>xhr.upload.onprogress</code> for tracking file and payload
+uploads.</li>
+<li><code>xhr.onprogress</code> for tracking download progress.</li>
+</ul>
+<p>These events are passed directly to user-defined callbacks
+(<code>onUploadProgress</code> and <code>onDownloadProgress</code>),
+enabling accurate progress bars in user interfaces.</p>
+<h3 id="4-request-cancellation">4. Request Cancellation</h3>
+<p>The XHR adapter integrates with modern <code>AbortController</code>
+signals as well as legacy Axios <code>CancelToken</code> instances. When
+an abort signal is triggered, the adapter calls
+<code>xhr.abort()</code>, immediately terminating the network connection
+and cleaning up browser resources.</p>
+<h2 id="architectural-benefits">Architectural Benefits</h2>
+<p>By isolating <code>XMLHttpRequest</code> logic inside the default XHR
+adapter, Axios keeps its core logic lightweight and testable. Developers
+can replace the default XHR adapter with custom implementations—such as
+a <code>fetch</code>-based adapter or a mock adapter for unit
+testing—without altering how interceptors, defaults, or response
+transforms function in their applications.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

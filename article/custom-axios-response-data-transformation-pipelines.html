@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Axios Response Data Transformation Pipelines - axios</title>
+    <meta name="description" content="This guide explains how to configure custom response data transformation pipelines in the Axios HTTP client. You will learn how to leverage the transformResponse configuration option and Axios interceptors to sanitize, normalize, and manipulate incoming">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/custom-axios-response-data-transformation-pipelines">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Custom Axios Response Data Transformation Pipelines - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/custom-axios-response-data-transformation-pipelines" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to configure custom response data transformation pipelines in the Axios HTTP client. You will learn how to leverage the transformResponse configuration option and Axios interceptors to sanitize, normalize, and manipulate incoming" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="custom-axios-response-data-transformation-pipelines">Custom
+Axios Response Data Transformation Pipelines</h1>
+<p>This guide explains how to configure custom response data
+transformation pipelines in the Axios HTTP client. You will learn how to
+leverage the <code>transformResponse</code> configuration option and
+Axios interceptors to sanitize, normalize, and manipulate incoming
+server payloads before they reach your application's business logic.</p>
+<h2 id="using-the-transformresponse-property">Using the
+<code>transformResponse</code> Property</h2>
+<p>Axios provides a built-in <code>transformResponse</code> option that
+accepts an array of functions. Each function receives the response data
+and headers, passes its output to the next function in the pipeline, and
+returns the final transformed data.</p>
+<p>By default, Axios includes a single transformer that parses JSON
+strings into JavaScript objects:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">transformResponse</span> <span class="op">=</span> [</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">function</span> (data) {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">JSON</span><span class="op">.</span><span class="fu">parse</span>(data)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span></code></pre></div>
+<h3 id="building-a-multi-step-transformation-pipeline">Building a
+Multi-Step Transformation Pipeline</h3>
+<p>When defining custom pipelines, you can chain multiple functions to
+handle tasks like string decoding, property renaming, or date
+parsing.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Transformer to parse ISO date strings into Date objects</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> parseDates <span class="op">=</span> (data) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="kw">typeof</span> data <span class="op">!==</span> <span class="st">&#39;object&#39;</span> <span class="op">||</span> data <span class="op">===</span> <span class="kw">null</span>) <span class="cf">return</span> data<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">const</span> key <span class="kw">of</span> <span class="bu">Object</span><span class="op">.</span><span class="fu">keys</span>(data)) {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> value <span class="op">=</span> data[key]<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> isoDateFormat <span class="op">=</span> <span class="ss">/</span><span class="sc">^\d{4}</span><span class="ss">-</span><span class="sc">\d{2}</span><span class="ss">-</span><span class="sc">\d{2}</span><span class="ss">T</span><span class="sc">\d{2}</span><span class="ss">:</span><span class="sc">\d{2}</span><span class="ss">:</span><span class="sc">\d{2}</span><span class="ss">/</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="kw">typeof</span> value <span class="op">===</span> <span class="st">&#39;string&#39;</span> <span class="op">&amp;&amp;</span> isoDateFormat<span class="op">.</span><span class="fu">test</span>(value)) {</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>      data[key] <span class="op">=</span> <span class="kw">new</span> <span class="bu">Date</span>(value)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> <span class="cf">if</span> (<span class="kw">typeof</span> value <span class="op">===</span> <span class="st">&#39;object&#39;</span>) {</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">parseDates</span>(value)<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> data<span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Transformer to standardize API response wrappers</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> unwrapData <span class="op">=</span> (data) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> data <span class="op">&amp;&amp;</span> data<span class="op">.</span><span class="at">payload</span> <span class="op">?</span> data<span class="op">.</span><span class="at">payload</span> <span class="op">:</span> data<span class="op">;</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="co">// Create an Axios instance with the transformation pipeline</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com&#39;</span><span class="op">,</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transformResponse</span><span class="op">:</span> [</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Retain default JSON parsing first</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">transformResponse</span><span class="op">,</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Add custom transformers sequentially</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    unwrapData<span class="op">,</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    parseDates<span class="op">,</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>  ]<span class="op">,</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="im">default</span> apiClient<span class="op">;</span></span></code></pre></div>
+<h2 id="configuring-transformations-at-different-scopes">Configuring
+Transformations at Different Scopes</h2>
+<p>You can apply response transformation pipelines at the global level,
+instance level, or per-request level.</p>
+<h3 id="1-per-request-configuration">1. Per-Request Configuration</h3>
+<p>Override or append transformations for specific API calls:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>apiClient<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/users&#39;</span><span class="op">,</span> {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transformResponse</span><span class="op">:</span> [</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">...</span>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">transformResponse</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    (data) <span class="kw">=&gt;</span> data<span class="op">.</span><span class="fu">map</span>(user <span class="kw">=&gt;</span> ({ <span class="op">...</span>user<span class="op">,</span> <span class="dt">fullName</span><span class="op">:</span> <span class="vs">`</span><span class="sc">${</span>user<span class="op">.</span><span class="at">firstName</span><span class="sc">}</span><span class="vs"> </span><span class="sc">${</span>user<span class="op">.</span><span class="at">lastName</span><span class="sc">}</span><span class="vs">`</span> }))</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  ]</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="2-global-defaults">2. Global Defaults</h3>
+<p>Apply a pipeline across all Axios calls in your application:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">transformResponse</span> <span class="op">=</span> [</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">transformResponse</span><span class="op">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  (data) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Custom global transformation</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span></code></pre></div>
+<h2
+id="transformresponse-vs-response-interceptors"><code>transformResponse</code>
+vs. Response Interceptors</h2>
+<p>While <code>transformResponse</code> is ideal for synchronous data
+manipulation on successful responses, Axios
+<strong>interceptors</strong> provide broader control.</p>
+<ul>
+<li><strong><code>transformResponse</code></strong>: Executes only on
+raw payload data before the promise resolves. It is strictly meant for
+data parsing and modification.</li>
+<li><strong>Response Interceptors</strong>: Access the entire response
+object (including HTTP status codes, headers, and config) and support
+asynchronous execution or error handling.</li>
+</ul>
+<h3
+id="asynchronous-data-transformations-with-interceptors">Asynchronous
+Data Transformations with Interceptors</h3>
+<p>If your transformation pipeline requires asynchronous operations
+(such as decrypting data or making secondary lookup requests), use an
+interceptor instead:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>apiClient<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="fu">use</span>(<span class="kw">async</span> (response) <span class="kw">=&gt;</span> {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (response<span class="op">.</span><span class="at">data</span><span class="op">?.</span><span class="at">encrypted</span>) {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    response<span class="op">.</span><span class="at">data</span> <span class="op">=</span> <span class="cf">await</span> <span class="fu">decryptPayload</span>(response<span class="op">.</span><span class="at">data</span><span class="op">.</span><span class="at">payload</span>)<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> response<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>}<span class="op">,</span> (error) <span class="kw">=&gt;</span> {</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="bu">Promise</span><span class="op">.</span><span class="fu">reject</span>(error)<span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li><strong>Preserve Default Parsing</strong>: Always include
+<code>...axios.defaults.transformResponse</code> at the beginning of
+your pipeline unless you intend to manually parse raw JSON strings.</li>
+<li><strong>Handle Nullish Data</strong>: Ensure transformers
+defensively check for <code>null</code>, <code>undefined</code>, or
+unexpected non-object types to avoid unhandled runtime errors.</li>
+<li><strong>Keep Transformers Synchronous</strong>: Keep functions in
+<code>transformResponse</code> pure and synchronous. Use interceptors
+whenever <code>async/await</code> is required.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

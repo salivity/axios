@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios responseType Document Explained for Browsers - axios</title>
+    <meta name="description" content="Setting responseType: 'document' in Axios configures the browser to automatically parse an incoming HTML or XML response into a native DOM Document object. This guide covers how the setting interacts with browser APIs, changes the structure of response.d">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-response-type-document-explained-for-browsers">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios responseType Document Explained for Browsers - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-response-type-document-explained-for-browsers" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Setting responseType: 'document' in Axios configures the browser to automatically parse an incoming HTML or XML response into a native DOM Document object. This guide covers how the setting interacts with browser APIs, changes the structure of response.d" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-responsetype-document-explained-for-browsers">Axios
+responseType Document Explained for Browsers</h1>
+<p>Setting <code>responseType: 'document'</code> in Axios configures the
+browser to automatically parse an incoming HTML or XML response into a
+native DOM <code>Document</code> object. This guide covers how the
+setting interacts with browser APIs, changes the structure of
+<code>response.data</code>, enables direct DOM querying, and behaves
+across different runtime environments.</p>
+<h3 id="how-it-works-under-the-hood">How It Works Under the Hood</h3>
+<p>When running in a browser, Axios relies on the native
+<code>XMLHttpRequest</code> (XHR) API. Passing
+<code>{ responseType: 'document' }</code> in the Axios request
+configuration assigns the value directly to
+<code>XMLHttpRequest.responseType</code>.</p>
+<p>Upon receiving the response, the browser's built-in parsing engine
+checks the <code>Content-Type</code> header (such as
+<code>text/html</code>, <code>application/xml</code>, or
+<code>text/xml</code>) and automatically converts the raw text stream
+into an <code>HTMLDocument</code> or <code>XMLDocument</code>.</p>
+<h3 id="impact-on-responsedata">Impact on
+<code>response.data</code></h3>
+<p>Without this setting, Axios treats HTML or XML responses as plain
+text strings, requiring manual parsing. With
+<code>responseType: 'document'</code>, <code>response.data</code>
+provides immediate access to a fully instantiated DOM tree.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">fetchPageTitle</span>() {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">try</span> {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://example.com&#39;</span><span class="op">,</span> {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">responseType</span><span class="op">:</span> <span class="st">&#39;document&#39;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// response.data is an HTMLDocument instance</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> doc <span class="op">=</span> response<span class="op">.</span><span class="at">data</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Use standard DOM traversal methods directly</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> pageTitle <span class="op">=</span> doc<span class="op">.</span><span class="fu">querySelector</span>(<span class="st">&#39;title&#39;</span>)<span class="op">?.</span><span class="at">textContent</span><span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> firstHeading <span class="op">=</span> doc<span class="op">.</span><span class="fu">querySelector</span>(<span class="st">&#39;h1&#39;</span>)<span class="op">?.</span><span class="at">innerText</span><span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Title:&#39;</span><span class="op">,</span> pageTitle)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;H1:&#39;</span><span class="op">,</span> firstHeading)<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">catch</span> (error) {</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Request failed:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="key-advantages">Key Advantages</h3>
+<ul>
+<li><strong>No Manual Parsing:</strong> Eliminates the need to
+instantiate a <code>DOMParser</code> instance (e.g.,
+<code>new DOMParser().parseFromString(data, 'text/html')</code>).</li>
+<li><strong>Direct Access to DOM APIs:</strong> Standard DOM querying
+methods like <code>getElementById</code>, <code>querySelectorAll</code>,
+and XPath evaluators work directly on <code>response.data</code>.</li>
+<li><strong>Performance:</strong> Parsing is handled natively at the
+browser level during the retrieval process rather than as an extra
+JavaScript processing step.</li>
+</ul>
+<h3 id="limitations-and-considerations">Limitations and
+Considerations</h3>
+<ol type="1">
+<li><strong>Browser-Only Support:</strong> This feature depends on the
+browser's native DOM parser. In Node.js environments, setting
+<code>responseType: 'document'</code> will not produce a DOM object;
+libraries like <code>cheerio</code> or <code>jsdom</code> must be used
+instead.</li>
+<li><strong>MIME Type Dependency:</strong> If the server returns a
+<code>Content-Type</code> header that the browser does not recognize as
+valid HTML or XML, the browser parser may return <code>null</code> for
+the response body.</li>
+<li><strong>Malformed Markup:</strong> In XML mode, syntax errors in the
+returned document will result in an XML parser error document rather
+than a standard object structure.</li>
+</ol></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

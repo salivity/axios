@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Override Global Axios Config Per Request - axios</title>
+    <meta name="description" content="Axios allows developers to establish global default configurations, such as base URLs, headers, and timeout thresholds, across an entire application. However, individual network requests often require custom parameters that deviate from these baseline se">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-to-override-global-axios-config-per-request">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Override Global Axios Config Per Request - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-to-override-global-axios-config-per-request" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios allows developers to establish global default configurations, such as base URLs, headers, and timeout thresholds, across an entire application. However, individual network requests often require custom parameters that deviate from these baseline se" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-to-override-global-axios-config-per-request">How to Override
+Global Axios Config Per Request</h1>
+<p>Axios allows developers to establish global default configurations,
+such as base URLs, headers, and timeout thresholds, across an entire
+application. However, individual network requests often require custom
+parameters that deviate from these baseline settings. This guide
+explains the Axios configuration hierarchy and demonstrates how to
+override global defaults directly on a per-request basis with practical
+code examples.</p>
+<h3 id="the-axios-configuration-precedence">The Axios Configuration
+Precedence</h3>
+<p>Axios applies configuration rules in a specific order of precedence,
+where later configurations overwrite earlier ones:</p>
+<ol type="1">
+<li><strong>Library defaults:</strong> Built-in settings provided by
+Axios.</li>
+<li><strong>Global defaults (<code>axios.defaults</code>):</strong>
+Settings applied globally across the entire Axios module.</li>
+<li><strong>Instance defaults (<code>instance.defaults</code>):</strong>
+Settings set on a custom instance created via
+<code>axios.create()</code>.</li>
+<li><strong>Per-request configuration:</strong> The <code>config</code>
+object explicitly passed into a specific request method.</li>
+</ol>
+<p>Because per-request configuration sits at the top of the hierarchy,
+any property defined directly in a request will override the
+corresponding global default.</p>
+<hr />
+<h3 id="setting-global-defaults">Setting Global Defaults</h3>
+<p>Global configurations are typically defined during application
+initialization using the <code>axios.defaults</code> object:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Set global configuration defaults</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">baseURL</span> <span class="op">=</span> <span class="st">&#39;https://api.example.com/v1&#39;</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">headers</span><span class="op">.</span><span class="at">common</span>[<span class="st">&#39;Authorization&#39;</span>] <span class="op">=</span> <span class="st">&#39;Bearer global_default_token&#39;</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">headers</span><span class="op">.</span><span class="at">post</span>[<span class="st">&#39;Content-Type&#39;</span>] <span class="op">=</span> <span class="st">&#39;application/json&#39;</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">defaults</span><span class="op">.</span><span class="at">timeout</span> <span class="op">=</span> <span class="dv">5000</span><span class="op">;</span> <span class="co">// 5 seconds</span></span></code></pre></div>
+<hr />
+<h3 id="overriding-defaults-in-specific-requests">Overriding Defaults in
+Specific Requests</h3>
+<p>To override these global values, pass a configuration object directly
+to the request method.</p>
+<h4 id="1-overriding-in-get-delete-and-head-requests">1. Overriding in
+<code>GET</code>, <code>DELETE</code>, and <code>HEAD</code>
+Requests</h4>
+<p>For methods that do not send a request body, the configuration object
+is passed as the <strong>second argument</strong>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Overriding timeout and headers for a single GET request</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/users&#39;</span><span class="op">,</span> {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">10000</span><span class="op">,</span> <span class="co">// Extends timeout to 10 seconds</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Authorization&#39;</span><span class="op">:</span> <span class="st">&#39;Bearer custom_request_token&#39;</span><span class="op">,</span> <span class="co">// Overrides global token</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Custom-Header&#39;</span><span class="op">:</span> <span class="st">&#39;SpecificValue&#39;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">then</span>(response <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(response<span class="op">.</span><span class="at">data</span>))</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">catch</span>(error <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(error))<span class="op">;</span></span></code></pre></div>
+<h4 id="2-overriding-in-post-put-and-patch-requests">2. Overriding in
+<code>POST</code>, <code>PUT</code>, and <code>PATCH</code>
+Requests</h4>
+<p>For methods that accept a payload, the configuration object is passed
+as the <strong>third argument</strong> (after the endpoint URL and data
+payload).</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> payload <span class="op">=</span> { <span class="dt">name</span><span class="op">:</span> <span class="st">&#39;John Doe&#39;</span> }<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Overriding Content-Type for file uploads or specific payloads</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;/upload&#39;</span><span class="op">,</span> payload<span class="op">,</span> {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://upload.example.com&#39;</span><span class="op">,</span> <span class="co">// Overrides global baseURL</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;multipart/form-data&#39;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">then</span>(response <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(response<span class="op">.</span><span class="at">data</span>))</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="op">.</span><span class="fu">catch</span>(error <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(error))<span class="op">;</span></span></code></pre></div>
+<h4 id="3-overriding-using-the-direct-axiosconfig-method">3. Overriding
+Using the Direct <code>axios(config)</code> Method</h4>
+<p>When using the generic <code>axios()</code> function, specify all
+request options directly within a single configuration object:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">axios</span>({</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">method</span><span class="op">:</span> <span class="st">&#39;get&#39;</span><span class="op">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">url</span><span class="op">:</span> <span class="st">&#39;/reports/annual&#39;</span><span class="op">,</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://analytics.example.com&#39;</span><span class="op">,</span> <span class="co">// Overrides global baseURL</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">30000</span><span class="op">,</span>                           <span class="co">// Overrides global timeout</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Authorization&#39;</span><span class="op">:</span> <span class="st">&#39;Bearer report_access_token&#39;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="unsetting-global-headers-for-a-single-request">Unsetting Global
+Headers for a Single Request</h3>
+<p>Headers are deeply merged by Axios. To completely remove a globally
+defined header for a single request, set its value to
+<code>undefined</code> or <code>null</code> in the request's
+configuration object:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Make an unauthenticated request by removing the global Authorization header</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/public-data&#39;</span><span class="op">,</span> {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;Authorization&#39;</span><span class="op">:</span> <span class="kw">undefined</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

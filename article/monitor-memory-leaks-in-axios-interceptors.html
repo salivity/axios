@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Memory Leaks in Axios Interceptors - axios</title>
+    <meta name="description" content="Axios interceptors are powerful tools for transforming requests and handling responses globally, but failing to remove them when they are no longer needed creates memory leaks. This guide explains how lingering interceptor closures retain references to l">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/monitor-memory-leaks-in-axios-interceptors">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Monitor Memory Leaks in Axios Interceptors - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/monitor-memory-leaks-in-axios-interceptors" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios interceptors are powerful tools for transforming requests and handling responses globally, but failing to remove them when they are no longer needed creates memory leaks. This guide explains how lingering interceptor closures retain references to l" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="monitor-memory-leaks-in-axios-interceptors">Monitor Memory Leaks
+in Axios Interceptors</h1>
+<p>Axios interceptors are powerful tools for transforming requests and
+handling responses globally, but failing to remove them when they are no
+longer needed creates memory leaks. This guide explains how lingering
+interceptor closures retain references to large objects, demonstrates
+how to monitor and detect these leaks using browser and Node.js
+profiling tools, and outlines programmatic patterns to track and prevent
+runaway interceptor registration.</p>
+<hr />
+<h3 id="how-axios-interceptors-cause-memory-leaks">How Axios
+Interceptors Cause Memory Leaks</h3>
+<p>Axios stores interceptors in an internal array called
+<code>handlers</code> inside an <code>InterceptorManager</code>
+instance. When you register an interceptor using
+<code>axios.interceptors.request.use()</code> or
+<code>axios.interceptors.response.use()</code>, Axios pushes your
+callback functions into this array.</p>
+<p>If you register interceptors inside short-lived components, dynamic
+service factories, or repeated lifecycle events without cleaning them
+up, the <code>handlers</code> array grows indefinitely. Because
+interceptors often form closures over surrounding scopes—such as
+component state, authentication tokens, or entire UI tree references—the
+garbage collector cannot reclaim that memory.</p>
+<hr />
+<h3 id="programmatic-monitoring-inspecting-handler-counts">Programmatic
+Monitoring: Inspecting Handler Counts</h3>
+<p>The fastest way to detect a leak programmatically during testing or
+runtime is to inspect the internal <code>handlers</code> array length
+directly on the Axios instance:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> api <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">checkInterceptorCount</span>(instance) {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> requestCount <span class="op">=</span> instance<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">request</span><span class="op">.</span><span class="at">handlers</span><span class="op">.</span><span class="fu">filter</span>(<span class="bu">Boolean</span>)<span class="op">.</span><span class="at">length</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> responseCount <span class="op">=</span> instance<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="at">handlers</span><span class="op">.</span><span class="fu">filter</span>(<span class="bu">Boolean</span>)<span class="op">.</span><span class="at">length</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Active Request Interceptors: </span><span class="sc">${</span>requestCount<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Active Response Interceptors: </span><span class="sc">${</span>responseCount<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (requestCount <span class="op">&gt;</span> <span class="dv">10</span> <span class="op">||</span> responseCount <span class="op">&gt;</span> <span class="dv">10</span>) {</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">warn</span>(<span class="st">&#39;Potential memory leak detected: High interceptor count.&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p><em>Note: When an interceptor is ejected via <code>eject()</code>,
+Axios sets its slot in the array to <code>null</code>. Filtering by
+<code>Boolean</code> ensures you only count active, non-ejected
+handlers.</em></p>
+<hr />
+<h3
+id="monitoring-memory-leaks-in-the-browser-chrome-devtools">Monitoring
+Memory Leaks in the Browser (Chrome DevTools)</h3>
+<p>To visually confirm and trace interceptor memory leaks in frontend
+applications:</p>
+<ol type="1">
+<li><strong>Open DevTools:</strong> Navigate to the
+<strong>Memory</strong> panel in Chrome DevTools.</li>
+<li><strong>Take a Baseline Snapshot:</strong> Select <strong>Heap
+snapshot</strong> and click <strong>Take snapshot</strong>.</li>
+<li><strong>Trigger the Suspected Workflow:</strong> Perform the UI
+action that repeatedly mounts components or issues requests (e.g.,
+navigating back and forth between routes 10 times).</li>
+<li><strong>Take a Second Snapshot:</strong> Capture another heap
+snapshot.</li>
+<li><strong>Compare Snapshots:</strong>
+<ul>
+<li>Change the view dropdown from <strong>Summary</strong> to
+<strong>Comparison</strong>.</li>
+<li>Filter by <code>InterceptorManager</code> or
+<code>Axios</code>.</li>
+<li>Look at the <strong># Delta</strong> column. If the number of
+<code>handlers</code> or functions attached to Axios is positive and
+increasing with every iteration, you have a leak.</li>
+</ul></li>
+<li><strong>Inspect the Retainer Tree:</strong> Click on the retained
+object to inspect its retainers. Check the bottom pane to see which
+closure or component holds the reference.</li>
+</ol>
+<hr />
+<h3 id="monitoring-memory-leaks-in-nodejs">Monitoring Memory Leaks in
+Node.js</h3>
+<p>For backend services, use heap analysis and metrics tracking to catch
+accumulating interceptors.</p>
+<h4 id="1-tracking-heap-growth-over-time">1. Tracking Heap Growth Over
+Time</h4>
+<p>Monitor baseline memory metrics using
+<code>process.memoryUsage()</code> to identify upward trends in heap
+usage:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="pp">setInterval</span>(() <span class="kw">=&gt;</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> usage <span class="op">=</span> <span class="bu">process</span><span class="op">.</span><span class="fu">memoryUsage</span>()<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>({</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">heapUsedMB</span><span class="op">:</span> (usage<span class="op">.</span><span class="at">heapUsed</span> <span class="op">/</span> <span class="dv">1024</span> <span class="op">/</span> <span class="dv">1024</span>)<span class="op">.</span><span class="fu">toFixed</span>(<span class="dv">2</span>)<span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">heapTotalMB</span><span class="op">:</span> (usage<span class="op">.</span><span class="at">heapTotal</span> <span class="op">/</span> <span class="dv">1024</span> <span class="op">/</span> <span class="dv">1024</span>)<span class="op">.</span><span class="fu">toFixed</span>(<span class="dv">2</span>)<span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>}<span class="op">,</span> <span class="dv">10000</span>)<span class="op">;</span></span></code></pre></div>
+<h4 id="2-taking-heap-snapshots-via-the-v8-module">2. Taking Heap
+Snapshots via the <code>v8</code> Module</h4>
+<p>Generate a snapshot when memory thresholds are breached:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> v8 <span class="im">from</span> <span class="st">&#39;v8&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> fs <span class="im">from</span> <span class="st">&#39;fs&#39;</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">takeSnapshot</span>(filename) {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> stream <span class="op">=</span> v8<span class="op">.</span><span class="fu">getHeapSnapshot</span>()<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> fileStream <span class="op">=</span> fs<span class="op">.</span><span class="fu">createWriteStream</span>(filename)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  stream<span class="op">.</span><span class="fu">pipe</span>(fileStream)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Load the resulting <code>.heapsnapshot</code> file into Chrome
+DevTools (Memory panel -&gt; Load) and search for
+<code>InterceptorManager</code> to verify retained closures.</p>
+<hr />
+<h3 id="how-to-fix-lingering-interceptors">How to Fix Lingering
+Interceptors</h3>
+<p>To stop memory leaks, always store the interceptor ID returned by
+<code>.use()</code> and pass it to <code>.eject()</code> when the
+consuming lifecycle ends.</p>
+<h4 id="example-react-cleanup-with-useeffect">Example: React Cleanup
+with <code>useEffect</code></h4>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { useEffect } <span class="im">from</span> <span class="st">&#39;react&#39;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axiosInstance <span class="im">from</span> <span class="st">&#39;./apiClient&#39;</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">UserProfile</span>({ token }) {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">useEffect</span>(() <span class="kw">=&gt;</span> {</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Attach interceptor and store the ID</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> interceptorId <span class="op">=</span> axiosInstance<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">request</span><span class="op">.</span><span class="fu">use</span>((config) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>      config<span class="op">.</span><span class="at">headers</span><span class="op">.</span><span class="at">Authorization</span> <span class="op">=</span> <span class="vs">`Bearer </span><span class="sc">${</span>token<span class="sc">}</span><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>      <span class="cf">return</span> config<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Clean up on unmount or token change</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>      axiosInstance<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">request</span><span class="op">.</span><span class="fu">eject</span>(interceptorId)<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    }<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span> [token])<span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="op">&lt;</span>div<span class="op">&gt;</span>Profile Component<span class="op">&lt;/</span>div<span class="op">&gt;;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="best-practices">Best Practices</h4>
+<ul>
+<li><strong>Define Interceptors Globally Once:</strong> Attach global
+authentication and logging interceptors at application startup rather
+than inside component lifecycles or request handlers.</li>
+<li><strong>Use Dedicated Instances:</strong> If a specific module
+requires unique headers, use <code>axios.create()</code> to create a
+local instance rather than mutating a shared global instance.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

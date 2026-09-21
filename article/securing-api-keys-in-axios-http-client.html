@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Securing API Keys in Axios HTTP Client - axios</title>
+    <meta name="description" content="Storing API keys directly within client-side Axios configurations exposes sensitive credentials to extraction, unauthorized usage, and potential security breaches. This guide outlines the essential architectural and implementation steps required to secur">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/securing-api-keys-in-axios-http-client">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Securing API Keys in Axios HTTP Client - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/securing-api-keys-in-axios-http-client" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Storing API keys directly within client-side Axios configurations exposes sensitive credentials to extraction, unauthorized usage, and potential security breaches. This guide outlines the essential architectural and implementation steps required to secur" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="securing-api-keys-in-axios-http-client">Securing API Keys in
+Axios HTTP Client</h1>
+<p>Storing API keys directly within client-side Axios configurations
+exposes sensitive credentials to extraction, unauthorized usage, and
+potential security breaches. This guide outlines the essential
+architectural and implementation steps required to secure API keys used
+in Axios HTTP client configurations, including utilizing backend
+proxies, environment variables, Axios interceptors, and strict API key
+restrictions.</p>
+<h3 id="1-shift-api-keys-to-a-backend-proxy-bff-pattern">1. Shift API
+Keys to a Backend Proxy (BFF Pattern)</h3>
+<p>The most effective way to secure API keys used by an Axios client
+running in a browser is to remove the keys from the frontend entirely.
+Browsers cannot securely store secrets.</p>
+<p>Implement a Backend-for-Frontend (BFF) or a serverless proxy endpoint
+(e.g., Next.js API routes, Express.js middleware, AWS Lambda):</p>
+<ul>
+<li>Configure the frontend Axios instance to send requests to your own
+backend server without an API key (using secure, HTTP-only session
+cookies instead).</li>
+<li>The backend server receives the request, injects the secret API key
+into the headers securely from a server-side environment variable, and
+forwards the call to the external API.</li>
+<li>The response is then returned to the client-side Axios
+instance.</li>
+</ul>
+<h3
+id="2-isolate-server-side-axios-configurations-using-environment-variables">2.
+Isolate Server-Side Axios Configurations Using Environment
+Variables</h3>
+<p>If Axios is running in a server-side environment (such as Node.js),
+ensure API keys are never hardcoded into your source files or
+repository:</p>
+<ul>
+<li>Store keys in <code>.env</code> files and add these files to
+<code>.gitignore</code>.</li>
+<li>Access keys using runtime configuration (e.g.,
+<code>process.env.API_KEY</code>).</li>
+<li>Create a dedicated Axios instance using <code>axios.create()</code>
+where the default authorization header is populated dynamically via
+environment variables.</li>
+</ul>
+<h3 id="3-use-axios-interceptors-with-short-lived-tokens">3. Use Axios
+Interceptors with Short-Lived Tokens</h3>
+<p>Instead of embedding static API keys, configure Axios to use
+short-lived authentication tokens (such as JWTs or OAuth access
+tokens):</p>
+<ul>
+<li>Set up an Axios request interceptor
+(<code>axios.interceptors.request.use</code>) that dynamically retrieves
+a fresh token from memory or a secure auth provider right before the
+request is dispatched.</li>
+<li>Implement a response interceptor
+(<code>axios.interceptors.response.use</code>) to catch
+<code>401 Unauthorized</code> responses, trigger a token refresh flow,
+and automatically retry the failed request with the new token.</li>
+</ul>
+<h3 id="4-restrict-and-constrain-key-permissions">4. Restrict and
+Constrain Key Permissions</h3>
+<p>If an API key must interact directly with a third-party service from
+an environment where it cannot be fully concealed:</p>
+<ul>
+<li><strong>IP Whitelisting:</strong> Restrict the API key to only
+accept requests originating from your specific server IP addresses.</li>
+<li><strong>HTTP Referrer Restrictions:</strong> Limit browser-based
+keys to specific domain names.</li>
+<li><strong>Least Privilege:</strong> Limit the key's permissions
+strictly to the endpoints and HTTP methods required for its specific
+task.</li>
+</ul>
+<h3 id="5-sanitize-axios-error-logging">5. Sanitize Axios Error
+Logging</h3>
+<p>By default, Axios error objects include the full <code>config</code>
+object, which may log raw request headers containing authorization keys
+to browser consoles or external monitoring tools (like Sentry or
+LogRocket).</p>
+<ul>
+<li>Configure global response interceptors to strip sensitive headers
+from error payloads before passing them to logging utilities.</li>
+<li>Ensure all logging functions explicitly redact
+<code>Authorization</code>, <code>x-api-key</code>, and other custom
+header values containing credentials.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

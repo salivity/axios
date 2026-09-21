@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Axios Handles Unexpected HTML Error Pages - axios</title>
+    <meta name="description" content="When consuming REST APIs, clients typically expect JSON responses. However, web servers, reverse proxies, and firewalls often return HTML error pages (such as 404, 502, or 504 status pages) during outages, route misconfigurations, or authentication redir">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/how-axios-handles-unexpected-html-error-pages">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Axios Handles Unexpected HTML Error Pages - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/how-axios-handles-unexpected-html-error-pages" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When consuming REST APIs, clients typically expect JSON responses. However, web servers, reverse proxies, and firewalls often return HTML error pages (such as 404, 502, or 504 status pages) during outages, route misconfigurations, or authentication redir" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="how-axios-handles-unexpected-html-error-pages">How Axios Handles
+Unexpected HTML Error Pages</h1>
+<p>When consuming REST APIs, clients typically expect JSON responses.
+However, web servers, reverse proxies, and firewalls often return HTML
+error pages (such as 404, 502, or 504 status pages) during outages,
+route misconfigurations, or authentication redirects. This article
+explains how the Axios HTTP client processes unexpected HTML responses
+when expecting JSON, what happens behind the scenes, and how to handle
+these scenarios reliably in your application.</p>
+<h3 id="default-axios-response-parsing">Default Axios Response
+Parsing</h3>
+<p>By default, Axios sets the <code>responseType</code> configuration to
+<code>'json'</code>. Under the hood, Axios uses a default response
+transformer that attempts to parse incoming response data using
+<code>JSON.parse()</code>.</p>
+<p>If the server responds with an HTML payload, the behavior depends on
+the HTTP status code:</p>
+<ol type="1">
+<li><strong>Error Status Codes (4xx / 5xx):</strong> By default, Axios
+rejects promises for any status code outside the 2xx range. The
+resulting error object contains an <code>error.response</code> property.
+Because the payload is HTML, the default transformer fails to parse it
+as JSON and falls back to returning the raw HTML string inside
+<code>error.response.data</code>.</li>
+<li><strong>Success Status Codes (200 OK):</strong> Some servers,
+proxies, or captive portals return an HTML page with a
+<code>200 OK</code> status (such as a login redirect or single-page app
+fallback). In this scenario, Axios resolves the promise successfully.
+However, because <code>JSON.parse()</code> fails silently inside Axios's
+default transformer, <code>response.data</code> is returned as a plain
+HTML string rather than a JavaScript object.</li>
+</ol>
+<h3 id="common-causes-of-html-responses">Common Causes of HTML
+Responses</h3>
+<ul>
+<li><strong>Reverse Proxy Errors:</strong> Cloudflare, Nginx, or AWS
+ALBs returning standard 502 Bad Gateway or 504 Gateway Timeout HTML
+pages before the request reaches the application server.</li>
+<li><strong>Single Page Application (SPA) Fallbacks:</strong> A server
+routing non-existent API paths to <code>index.html</code> with a 200
+status code.</li>
+<li><strong>Authentication Gateways:</strong> Corporate firewalls or
+captive Wi-Fi portals intercepting API requests and serving HTML login
+forms.</li>
+</ul>
+<h3 id="detecting-and-handling-html-responses">Detecting and Handling
+HTML Responses</h3>
+<p>To prevent application crashes when expecting structured JSON data,
+implement safeguards using response headers or global interceptors.</p>
+<h4 id="1-checking-the-content-type-header">1. Checking the Content-Type
+Header</h4>
+<p>Verify that the <code>content-type</code> header matches
+<code>application/json</code> before processing data:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;/api/data&#39;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">then</span>(response <span class="kw">=&gt;</span> {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> contentType <span class="op">=</span> response<span class="op">.</span><span class="at">headers</span>[<span class="st">&#39;content-type&#39;</span>]<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="op">!</span>contentType <span class="op">||</span> <span class="op">!</span>contentType<span class="op">.</span><span class="fu">includes</span>(<span class="st">&#39;application/json&#39;</span>)) {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>      <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">Error</span>(<span class="st">&#39;Received non-JSON response from server.&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Safe to use response.data as JSON</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">catch</span>(error <span class="kw">=&gt;</span> {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (error<span class="op">.</span><span class="at">response</span>) {</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>      <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="vs">`Status: </span><span class="sc">${</span>error<span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="at">status</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>      <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Payload:&#39;</span><span class="op">,</span> error<span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span></code></pre></div>
+<h4 id="2-global-handling-via-axios-interceptors">2. Global Handling via
+Axios Interceptors</h4>
+<p>You can implement an Axios response interceptor to validate content
+types across all requests globally and normalize error reporting:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>axios<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="fu">use</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  (response) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> contentType <span class="op">=</span> response<span class="op">.</span><span class="at">headers</span>[<span class="st">&#39;content-type&#39;</span>] <span class="op">||</span> <span class="st">&#39;&#39;</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="kw">typeof</span> response<span class="op">.</span><span class="at">data</span> <span class="op">===</span> <span class="st">&#39;string&#39;</span> <span class="op">&amp;&amp;</span> contentType<span class="op">.</span><span class="fu">includes</span>(<span class="st">&#39;text/html&#39;</span>)) {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>      <span class="cf">return</span> <span class="bu">Promise</span><span class="op">.</span><span class="fu">reject</span>(<span class="kw">new</span> <span class="bu">Error</span>(<span class="st">&#39;Unexpected HTML response received.&#39;</span>))<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> response<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  (error) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (error<span class="op">.</span><span class="at">response</span> <span class="op">&amp;&amp;</span> <span class="kw">typeof</span> error<span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="at">data</span> <span class="op">===</span> <span class="st">&#39;string&#39;</span>) {</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (error<span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="at">data</span><span class="op">.</span><span class="fu">trim</span>()<span class="op">.</span><span class="fu">startsWith</span>(<span class="st">&#39;&lt;!DOCTYPE html&gt;&#39;</span>) <span class="op">||</span> error<span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="at">data</span><span class="op">.</span><span class="fu">includes</span>(<span class="st">&#39;&lt;html&#39;</span>)) {</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        error<span class="op">.</span><span class="at">message</span> <span class="op">=</span> <span class="vs">`Server returned an HTML error page with status </span><span class="sc">${</span>error<span class="op">.</span><span class="at">response</span><span class="op">.</span><span class="at">status</span><span class="sc">}</span><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">Promise</span><span class="op">.</span><span class="fu">reject</span>(error)<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<p>By inspecting the response content type and payload structure, you
+can gracefully handle HTML responses and avoid runtime errors caused by
+unexpected data types.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios Misconfiguration Security Risks Explained - axios</title>
+    <meta name="description" content="Axios is one of the most widely used promise-based HTTP clients for JavaScript and Node.js applications. While it offers a simple API for making network requests, improper configurations can introduce severe security vulnerabilities into both client-side">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-misconfiguration-security-risks-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios Misconfiguration Security Risks Explained - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-misconfiguration-security-risks-explained" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Axios is one of the most widely used promise-based HTTP clients for JavaScript and Node.js applications. While it offers a simple API for making network requests, improper configurations can introduce severe security vulnerabilities into both client-side" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-misconfiguration-security-risks-explained">Axios
+Misconfiguration Security Risks Explained</h1>
+<p>Axios is one of the most widely used promise-based HTTP clients for
+JavaScript and Node.js applications. While it offers a simple API for
+making network requests, improper configurations can introduce severe
+security vulnerabilities into both client-side and server-side
+applications. This guide examines the primary security risks associated
+with misconfigured Axios instances, including Server-Side Request
+Forgery (SSRF), credential leakage, Denial of Service (DoS), and
+disabled transport security.</p>
+<h2 id="1-server-side-request-forgery-ssrf">1. Server-Side Request
+Forgery (SSRF)</h2>
+<p>When Axios is used in Node.js backends to fetch resources based on
+user-supplied inputs, failing to validate or sanitize URLs can lead to
+Server-Side Request Forgery.</p>
+<p>If an application directly passes raw user input into
+<code>axios.get(userUrl)</code> or dynamically constructs a
+<code>baseURL</code>, an attacker can point requests toward internal
+network resources (such as <code>http://localhost</code>, cloud metadata
+endpoints like <code>http://169.254.169.254</code>, or internal
+databases).</p>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Maintain an allowlist of permitted hostnames and protocols.</li>
+<li>Prevent requests to private IP ranges (e.g., <code>127.0.0.1</code>,
+<code>10.0.0.0/8</code>, <code>192.168.0.0/16</code>).</li>
+<li>Disallow protocol switching (e.g., restricting inputs strictly to
+<code>https:</code>).</li>
+</ul>
+<h2 id="2-unintended-credential-leakage-via-redirects">2. Unintended
+Credential Leakage via Redirects</h2>
+<p>Axios follows HTTP redirects by default. In complex configurations,
+custom request headers containing sensitive information—such as
+<code>Authorization: Bearer &lt;token&gt;</code> or custom API
+keys—might inadvertently be forwarded to an untrusted third-party server
+if a request is redirected.</p>
+<p>While modern versions of Axios strip sensitive headers across
+cross-origin redirects by default, custom interceptors or custom HTTP
+agents can override this safe behavior.</p>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Limit the maximum number of allowed redirects using
+<code>maxRedirects: 0</code> or a strictly controlled integer.</li>
+<li>Review request interceptors to ensure they do not re-attach
+sensitive authentication headers to untrusted destination URLs.</li>
+</ul>
+<h2 id="3-denial-of-service-dos-via-unset-timeouts">3. Denial of Service
+(DoS) via Unset Timeouts</h2>
+<p>By default, Axios does not configure a request timeout
+(<code>timeout: 0</code>). When Axios is running in a server-side
+environment, a hanging or slow external server can cause requests to
+remain open indefinitely.</p>
+<p>If multiple requests hang, connection pools and system memory become
+exhausted, resulting in a Denial of Service (DoS) that prevents the
+application from handling legitimate traffic.</p>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Always define an explicit timeout on global instances or per-request
+configs:</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com&#39;</span><span class="op">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">timeout</span><span class="op">:</span> <span class="dv">5000</span> <span class="co">// 5 seconds</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="4-insecure-tlsssl-verification">4. Insecure TLS/SSL
+Verification</h2>
+<p>Developers often disable TLS certificate verification during local
+debugging by passing a custom <code>httpsAgent</code> with
+<code>rejectUnauthorized: false</code>. If this configuration reaches
+staging or production environments, it exposes network communication to
+Man-in-the-Middle (MitM) attacks.</p>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Never deploy <code>rejectUnauthorized: false</code> to
+production.</li>
+<li>Use valid certificates or inject custom Certificate Authority (CA)
+bundles into the agent using the <code>ca</code> parameter rather than
+disabling verification entirely.</li>
+</ul>
+<h2 id="5-misconfigured-csrfxsrf-protection">5. Misconfigured CSRF/XSRF
+Protection</h2>
+<p>Axios provides built-in support for Cross-Site Request Forgery (CSRF)
+protection by automatically reading a token from a cookie (default:
+<code>XSRF-TOKEN</code>) and setting it as an HTTP header (default:
+<code>X-XSRF-TOKEN</code>).</p>
+<p>Security issues arise when:</p>
+<ul>
+<li>Developers customize <code>xsrfCookieName</code> or
+<code>xsrfHeaderName</code> improperly, leading the client to skip
+sending necessary tokens.</li>
+<li>Axios is allowed to send credentials and XSRF headers automatically
+to untrusted third-party endpoints, potentially leaking protection
+tokens to malicious domains.</li>
+</ul>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Ensure <code>xsrfCookieName</code> matches the exact cookie set by
+the backend server.</li>
+<li>Avoid exposing CSRF tokens on requests directed outside the
+application's primary domain.</li>
+</ul>
+<h2 id="6-dangerous-response-deserialization-and-prototype-pollution">6.
+Dangerous Response Deserialization and Prototype Pollution</h2>
+<p>By default, Axios automatically parses JSON responses. If an
+application interacts with an untrusted external API, maliciously
+crafted JSON payloads containing keys such as <code>__proto__</code> or
+<code>constructor</code> can trigger prototype pollution vulnerabilities
+when merged unsafely into application state objects.</p>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Validate and sanitize incoming response data using schema validation
+libraries (such as Zod or Joi) before merging it with application
+objects.</li>
+<li>Override <code>transformResponse</code> if custom deserialization or
+non-standard payloads must be safely parsed.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

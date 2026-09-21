@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios lookup Option in Node.js Explained - axios</title>
+    <meta name="description" content="The lookup configuration option in the Node.js version of Axios allows developers to customize how hostnames are resolved into IP addresses before an HTTP request is made. By overriding Node's default DNS resolution mechanism (dns.lookup), developers can">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-lookup-option-in-node-js-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios lookup Option in Node.js Explained - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-lookup-option-in-node-js-explained" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The lookup configuration option in the Node.js version of Axios allows developers to customize how hostnames are resolved into IP addresses before an HTTP request is made. By overriding Node's default DNS resolution mechanism (dns.lookup), developers can" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-lookup-option-in-nodejs-explained">Axios lookup Option in
+Node.js Explained</h1>
+<p>The <code>lookup</code> configuration option in the Node.js version
+of Axios allows developers to customize how hostnames are resolved into
+IP addresses before an HTTP request is made. By overriding Node's
+default DNS resolution mechanism (<code>dns.lookup</code>), developers
+can implement custom DNS caching, route requests through private DNS
+servers, mock network responses in automated tests, and avoid
+performance bottlenecks associated with the Node.js libuv thread
+pool.</p>
+<h2 id="understanding-how-axios-handles-dns-in-nodejs">Understanding How
+Axios Handles DNS in Node.js</h2>
+<p>When Axios executes in a Node.js environment, it relies on Node's
+native <code>http</code> and <code>https</code> modules to dispatch
+network requests. Under the hood, Node's standard connection process
+uses <code>dns.lookup()</code> to translate domain names into IP
+addresses.</p>
+<p>The <code>lookup</code> option is passed through Axios directly to
+the underlying <code>http.Agent</code> or <code>https.Agent</code>. This
+option accepts a custom function with the signature
+<code>(hostname, options, callback)</code> that replaces the default
+resolution logic.</p>
+<h2 id="the-problem-with-nodejs-default-dns-resolution">The Problem with
+Node.js Default DNS Resolution</h2>
+<p>Node's native <code>dns.lookup()</code> relies on the operating
+system's <code>getaddrinfo(3)</code> system call. Because
+<code>getaddrinfo</code> is synchronous and blocking, Node.js delegates
+it to the libuv thread pool. Under high network concurrency:</p>
+<ul>
+<li><strong>Thread Pool Exhaustion:</strong> The default libuv thread
+pool contains only four threads. High-frequency outgoing requests can
+quickly exhaust these threads, causing request latency and blocking
+other I/O operations like file system access or crypto tasks.</li>
+<li><strong>No Native Caching:</strong> Operating system DNS queries
+through <code>getaddrinfo</code> are not cached inside the Node.js
+runtime by default, requiring repeated queries for the same host.</li>
+</ul>
+<h2 id="key-use-cases-for-the-lookup-option">Key Use Cases for the
+<code>lookup</code> Option</h2>
+<h3 id="1-in-memory-dns-caching">1. In-Memory DNS Caching</h3>
+<p>The most common use of the <code>lookup</code> option is integrating
+custom caching libraries such as <code>cacheable-lookup</code>. Caching
+resolved IP addresses in memory drastically reduces DNS query overhead,
+lowers request latency, and prevents thread pool saturation.</p>
+<h3 id="2-custom-dns-resolvers">2. Custom DNS Resolvers</h3>
+<p>Using <code>lookup</code>, you can bypass OS-level resolution and use
+custom DNS servers via Node's asynchronous <code>dns.resolve()</code>
+methods or third-party DNS-over-HTTPS (DoH) providers.</p>
+<h3 id="3-ip-pinning-and-service-discovery">3. IP Pinning and Service
+Discovery</h3>
+<p>Microservices can use a custom <code>lookup</code> handler to resolve
+service names directly to container IPs or load balancer endpoints
+without querying external DNS servers.</p>
+<h3 id="4-testing-and-mocking">4. Testing and Mocking</h3>
+<p>During integration testing, <code>lookup</code> can intercept
+specific hostnames and redirect traffic to <code>127.0.0.1</code> or
+specific test servers without modifying the application code or
+<code>/etc/hosts</code> file.</p>
+<h2 id="how-to-configure-lookup-in-axios">How to Configure
+<code>lookup</code> in Axios</h2>
+<p>To use the <code>lookup</code> option, configure a custom HTTP/HTTPS
+agent and pass it to your Axios instance or request config:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> http <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;http&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> https <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;https&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> CacheableLookup <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;cacheable-lookup&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize a DNS cache</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cacheable <span class="op">=</span> <span class="kw">new</span> <span class="fu">CacheableLookup</span>()<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Create custom agents using the lookup function</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpAgent <span class="op">=</span> <span class="kw">new</span> http<span class="op">.</span><span class="fu">Agent</span>({</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">lookup</span><span class="op">:</span> cacheable<span class="op">.</span><span class="at">lookup</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> httpsAgent <span class="op">=</span> <span class="kw">new</span> https<span class="op">.</span><span class="fu">Agent</span>({</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">lookup</span><span class="op">:</span> cacheable<span class="op">.</span><span class="at">lookup</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co">// Attach the agents to an Axios instance</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  httpAgent<span class="op">,</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  httpsAgent</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="co">// Outgoing requests will now utilize the cached lookup function</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>apiClient<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/data&#39;</span>)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">then</span>(response <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(response<span class="op">.</span><span class="at">data</span>))</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">catch</span>(error <span class="kw">=&gt;</span> <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(error))<span class="op">;</span></span></code></pre></div>
+<h2 id="summary">Summary</h2>
+<p>The <code>lookup</code> option provides granular control over the DNS
+resolution phase of HTTP requests in Axios. By supplying a custom lookup
+handler to the Node.js agent, you can implement DNS caching, optimize
+high-throughput applications, and avoid libuv thread pool
+bottlenecks.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

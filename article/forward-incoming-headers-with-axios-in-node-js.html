@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forward Incoming Headers with Axios in Node.js - axios</title>
+    <meta name="description" content="This guide explains how to properly capture incoming client HTTP request headers in a Node.js API gateway and forward them to downstream services using Axios. You will learn how to identify necessary context headers, sanitize hop-by-hop headers that can">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/forward-incoming-headers-with-axios-in-node-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Forward Incoming Headers with Axios in Node.js - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/forward-incoming-headers-with-axios-in-node-js" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to properly capture incoming client HTTP request headers in a Node.js API gateway and forward them to downstream services using Axios. You will learn how to identify necessary context headers, sanitize hop-by-hop headers that can" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="forward-incoming-headers-with-axios-in-nodejs">Forward Incoming
+Headers with Axios in Node.js</h1>
+<p>This guide explains how to properly capture incoming client HTTP
+request headers in a Node.js API gateway and forward them to downstream
+services using Axios. You will learn how to identify necessary context
+headers, sanitize hop-by-hop headers that can break upstream requests,
+and implement a reusable Express middleware pattern for seamless request
+proxying.</p>
+<h2 id="why-header-forwarding-matters">Why Header Forwarding
+Matters</h2>
+<p>In a microservices architecture, an API gateway acts as the single
+entry point for client requests. Forwarding headers is necessary to
+preserve crucial context, such as:</p>
+<ul>
+<li><strong>Authentication &amp; Authorization:</strong> Passing
+<code>Authorization</code> (Bearer tokens, API keys) downstream.</li>
+<li><strong>Distributed Tracing:</strong> Preserving correlation IDs
+like <code>X-Request-ID</code>, <code>X-Correlation-ID</code>, or
+OpenTelemetry headers (<code>traceparent</code>).</li>
+<li><strong>Client Context:</strong> Passing client metadata like
+<code>User-Agent</code>, <code>Accept-Language</code>, and
+<code>X-Forwarded-For</code>.</li>
+</ul>
+<h2 id="handling-hop-by-hop-headers">Handling Hop-by-Hop Headers</h2>
+<p>You should never forward all incoming headers blindly. HTTP
+distinguishes between <strong>end-to-end</strong> headers (intended for
+the final recipient) and <strong>hop-by-hop</strong> headers (meaningful
+only for a single transport-level connection). Forwarding hop-by-hop
+headers or the <code>host</code> header can cause downstream network
+timeouts, connection resets, or payload mismatches.</p>
+<p>Standard hop-by-hop headers to remove include:</p>
+<ul>
+<li><code>connection</code></li>
+<li><code>keep-alive</code></li>
+<li><code>proxy-authenticate</code></li>
+<li><code>proxy-authorization</code></li>
+<li><code>te</code></li>
+<li><code>trailer</code></li>
+<li><code>transfer-encoding</code></li>
+<li><code>upgrade</code></li>
+<li><code>host</code></li>
+<li><code>content-length</code> (Axios will recalculate this based on
+the outgoing payload)</li>
+</ul>
+<h2 id="implementation-in-express-and-axios">Implementation in Express
+and Axios</h2>
+<p>Below is a complete implementation demonstrating how to filter
+incoming headers and pass them through Axios.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> express <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;express&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> axios <span class="op">=</span> <span class="pp">require</span>(<span class="st">&#39;axios&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> app <span class="op">=</span> <span class="fu">express</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">use</span>(express<span class="op">.</span><span class="fu">json</span>())<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// List of hop-by-hop headers to exclude</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> HOP_BY_HOP_HEADERS <span class="op">=</span> <span class="kw">new</span> <span class="bu">Set</span>([</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;connection&#39;</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;keep-alive&#39;</span><span class="op">,</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;proxy-authenticate&#39;</span><span class="op">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;proxy-authorization&#39;</span><span class="op">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;te&#39;</span><span class="op">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;trailer&#39;</span><span class="op">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;transfer-encoding&#39;</span><span class="op">,</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;upgrade&#39;</span><span class="op">,</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;host&#39;</span><span class="op">,</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;content-length&#39;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>])<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co"> * Filter out hop-by-hop headers and attach proxy tracking headers</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">prepareForwardHeaders</span>(incomingHeaders<span class="op">,</span> clientIp) {</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> forwardedHeaders <span class="op">=</span> {}<span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">const</span> [key<span class="op">,</span> value] <span class="kw">of</span> <span class="bu">Object</span><span class="op">.</span><span class="fu">entries</span>(incomingHeaders)) {</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="op">!</span>HOP_BY_HOP_HEADERS<span class="op">.</span><span class="fu">has</span>(key<span class="op">.</span><span class="fu">toLowerCase</span>())) {</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>      forwardedHeaders[key] <span class="op">=</span> value<span class="op">;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Append or set standard proxy headers</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>  forwardedHeaders[<span class="st">&#39;x-forwarded-for&#39;</span>] <span class="op">=</span> incomingHeaders[<span class="st">&#39;x-forwarded-for&#39;</span>]</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">?</span> <span class="vs">`</span><span class="sc">${</span>incomingHeaders[<span class="st">&#39;x-forwarded-for&#39;</span>]<span class="sc">}</span><span class="vs">, </span><span class="sc">${</span>clientIp<span class="sc">}</span><span class="vs">`</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>    <span class="op">:</span> clientIp<span class="op">;</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> forwardedHeaders<span class="op">;</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="co">// Gateway route forwarding requests to a microservice</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">all</span>(<span class="st">&#39;/service/*&#39;</span><span class="op">,</span> <span class="kw">async</span> (req<span class="op">,</span> res) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> downstreamBaseUrl <span class="op">=</span> <span class="st">&#39;https://api.internal-service.local&#39;</span><span class="op">;</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> targetUrl <span class="op">=</span> <span class="vs">`</span><span class="sc">${</span>downstreamBaseUrl<span class="sc">}${</span>req<span class="op">.</span><span class="at">originalUrl</span><span class="op">.</span><span class="fu">replace</span>(<span class="st">&#39;/service&#39;</span><span class="op">,</span> <span class="st">&#39;&#39;</span>)<span class="sc">}</span><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> headers <span class="op">=</span> <span class="fu">prepareForwardHeaders</span>(req<span class="op">.</span><span class="at">headers</span><span class="op">,</span> req<span class="op">.</span><span class="at">ip</span>)<span class="op">;</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>  <span class="cf">try</span> {</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> <span class="fu">axios</span>({</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>      <span class="dt">method</span><span class="op">:</span> req<span class="op">.</span><span class="at">method</span><span class="op">,</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>      <span class="dt">url</span><span class="op">:</span> targetUrl<span class="op">,</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>      <span class="dt">headers</span><span class="op">:</span> headers<span class="op">,</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>      <span class="dt">data</span><span class="op">:</span> req<span class="op">.</span><span class="at">body</span><span class="op">,</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>      <span class="dt">params</span><span class="op">:</span> req<span class="op">.</span><span class="at">query</span><span class="op">,</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>      <span class="dt">validateStatus</span><span class="op">:</span> () <span class="kw">=&gt;</span> <span class="kw">true</span> <span class="co">// Forward all HTTP status codes directly</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Send the downstream response back to the client</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>    res<span class="op">.</span><span class="fu">status</span>(response<span class="op">.</span><span class="at">status</span>)<span class="op">.</span><span class="fu">set</span>(response<span class="op">.</span><span class="at">headers</span>)<span class="op">.</span><span class="fu">send</span>(response<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">catch</span> (error) {</span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>    res<span class="op">.</span><span class="fu">status</span>(<span class="dv">502</span>)<span class="op">.</span><span class="fu">json</span>({</span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>      <span class="dt">error</span><span class="op">:</span> <span class="st">&#39;Bad Gateway&#39;</span><span class="op">,</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>      <span class="dt">message</span><span class="op">:</span> error<span class="op">.</span><span class="at">message</span></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>app<span class="op">.</span><span class="fu">listen</span>(<span class="dv">3000</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;API Gateway running on port 3000&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="key-considerations">Key Considerations</h2>
+<ul>
+<li><strong>Header Mutations:</strong> Some headers are transformed into
+lowercase by Node.js HTTP parsers (<code>req.headers</code>). Axios
+handles lowercase keys correctly without issues.</li>
+<li><strong>Sensitive Headers:</strong> If your gateway terminates
+authentication (e.g., converting a public JWT into an internal user
+object), strip the incoming <code>Authorization</code> header and
+replace it with custom internal identity headers such as
+<code>X-User-Id</code> or <code>X-User-Roles</code>.</li>
+<li><strong>Timeout Handling:</strong> Always configure explicit
+timeouts in your Axios configuration (<code>timeout: 5000</code>) to
+prevent downstream latency from exhausting gateway sockets.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

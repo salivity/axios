@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axios ArrayBuffer Uploads for Binary Protocols - axios</title>
+    <meta name="description" content="This article explains how the Axios HTTP client handles raw ArrayBuffer data for binary-based network protocols such as Protocol Buffers, MessagePack, or custom binary payloads. It covers the underlying transport mechanisms in both browser and Node.js en">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/axios-array-buffer-uploads-for-binary-protocols">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Axios ArrayBuffer Uploads for Binary Protocols - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/axios-array-buffer-uploads-for-binary-protocols" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the Axios HTTP client handles raw ArrayBuffer data for binary-based network protocols such as Protocol Buffers, MessagePack, or custom binary payloads. It covers the underlying transport mechanisms in both browser and Node.js en" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="axios-arraybuffer-uploads-for-binary-protocols">Axios
+ArrayBuffer Uploads for Binary Protocols</h1>
+<p>This article explains how the Axios HTTP client handles raw
+<code>ArrayBuffer</code> data for binary-based network protocols such as
+Protocol Buffers, MessagePack, or custom binary payloads. It covers the
+underlying transport mechanisms in both browser and Node.js
+environments, required header configurations, proper payload handling,
+and how to avoid common serialization pitfalls.</p>
+<h2 id="environment-specific-transport-mechanisms">Environment-Specific
+Transport Mechanisms</h2>
+<p>Axios automatically adapts how it transmits binary data depending on
+the execution runtime:</p>
+<ul>
+<li><strong>Browser Environment:</strong> Axios utilizes the
+<code>XMLHttpRequest</code> (or the Fetch adapter in modern versions).
+When an <code>ArrayBuffer</code> is passed as the <code>data</code>
+property, Axios passes the reference directly to the native
+<code>xhr.send()</code> method without serializing it to a string. The
+browser handles the raw bytes natively over the wire.</li>
+<li><strong>Node.js Environment:</strong> Axios uses the native
+<code>http</code> and <code>https</code> modules. In Node.js, an
+<code>ArrayBuffer</code> or a <code>TypedArray</code> (such as
+<code>Uint8Array</code>) is internally converted into a Node.js
+<code>Buffer</code> instance before being written directly to the
+writable request stream via <code>req.write()</code>.</li>
+</ul>
+<h2 id="setting-request-headers-for-binary-payloads">Setting Request
+Headers for Binary Payloads</h2>
+<p>When transmitting raw binary protocols, you must explicitly define
+the <code>Content-Type</code> header. If omitted, Axios or the receiving
+server might attempt to infer the MIME type or default to
+<code>application/x-www-form-urlencoded</code> or
+<code>application/json</code>.</p>
+<p>Common headers for binary uploads include:</p>
+<ul>
+<li><code>Content-Type: application/octet-stream</code> for generic
+binary streams.</li>
+<li><code>Content-Type: application/x-protobuf</code> for Protocol
+Buffers.</li>
+<li><code>Content-Type: application/msgpack</code> for MessagePack
+data.</li>
+</ul>
+<h2 id="code-example-sending-an-arraybuffer">Code Example: Sending an
+ArrayBuffer</h2>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create binary data</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> buffer <span class="op">=</span> <span class="kw">new</span> <span class="bu">ArrayBuffer</span>(<span class="dv">8</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> view <span class="op">=</span> <span class="kw">new</span> <span class="bu">Int32Array</span>(buffer)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>view[<span class="dv">0</span>] <span class="op">=</span> <span class="dv">42</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>view[<span class="dv">1</span>] <span class="op">=</span> <span class="dv">84</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">uploadBinaryData</span>() {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">try</span> {</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;https://api.example.com/binary-endpoint&#39;</span><span class="op">,</span> buffer<span class="op">,</span> {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>      <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;application/octet-stream&#39;</span><span class="op">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>      }<span class="op">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Ensure the response is also handled as binary if needed</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>      <span class="dt">responseType</span><span class="op">:</span> <span class="st">&#39;arraybuffer&#39;</span><span class="op">,</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Explicit maxBodyLength setting for large binary uploads in Node.js</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>      <span class="dt">maxBodyLength</span><span class="op">:</span> <span class="kw">Infinity</span><span class="op">,</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>      <span class="dt">maxContentLength</span><span class="op">:</span> <span class="kw">Infinity</span><span class="op">,</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Binary upload successful:&#39;</span><span class="op">,</span> response<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">catch</span> (error) {</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Binary upload failed:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="fu">uploadBinaryData</span>()<span class="op">;</span></span></code></pre></div>
+<h2 id="handling-typedarrays-vs-arraybuffers">Handling TypedArrays vs.
+ArrayBuffers</h2>
+<p>Axios accepts both <code>ArrayBuffer</code> instances and typed array
+views (like <code>Uint8Array</code>, <code>Float32Array</code>, or
+<code>DataView</code>).</p>
+<p>If you are working with a typed array that represents a sub-slice of
+a larger buffer, pass the typed array directly or pass the specific
+sliced buffer:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> uint8Array <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint8Array</span>([<span class="bn">0x01</span><span class="op">,</span> <span class="bn">0x02</span><span class="op">,</span> <span class="bn">0x03</span><span class="op">,</span> <span class="bn">0x04</span>])<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Passing TypedArray directly:</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;/api&#39;</span><span class="op">,</span> uint8Array<span class="op">,</span> {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> { <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;application/octet-stream&#39;</span> }</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Or accessing the underlying ArrayBuffer:</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> axios<span class="op">.</span><span class="fu">post</span>(<span class="st">&#39;/api&#39;</span><span class="op">,</span> uint8Array<span class="op">.</span><span class="at">buffer</span><span class="op">,</span> {</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">headers</span><span class="op">:</span> { <span class="st">&#39;Content-Type&#39;</span><span class="op">:</span> <span class="st">&#39;application/octet-stream&#39;</span> }</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="request-transformations-and-interceptors">Request
+Transformations and Interceptors</h2>
+<p>By default, Axios includes built-in request transformers in
+<code>axios.defaults.transformRequest</code>. These default transformers
+check whether the data is an <code>ArrayBuffer</code>,
+<code>Buffer</code>, <code>FormData</code>, or <code>Stream</code>. When
+raw binary data is detected, Axios bypasses JSON stringification and
+leaves the payload untouched.</p>
+<p>If you use custom Axios instances with modified
+<code>transformRequest</code> functions, ensure your custom
+transformations do not convert binary payloads into strings or objects
+before transmission:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> instance <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transformRequest</span><span class="op">:</span> [</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    (data<span class="op">,</span> headers) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (data <span class="kw">instanceof</span> <span class="bu">ArrayBuffer</span> <span class="op">||</span> <span class="bu">ArrayBuffer</span><span class="op">.</span><span class="fu">isView</span>(data)) {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> data<span class="op">;</span> <span class="co">// Do not transform binary data</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>      <span class="cf">return</span> <span class="bu">JSON</span><span class="op">.</span><span class="fu">stringify</span>(data)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  ]</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

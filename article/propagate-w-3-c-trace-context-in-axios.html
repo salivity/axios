@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propagate W3C Trace Context in Axios - axios</title>
+    <meta name="description" content="Distributed tracing enables monitoring and troubleshooting of microservices by tracking HTTP requests across multiple service boundaries. This article explains how to integrate distributed tracing IDs into the Axios HTTP client using the standard W3C Tra">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/propagate-w-3-c-trace-context-in-axios">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Propagate W3C Trace Context in Axios - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/propagate-w-3-c-trace-context-in-axios" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Distributed tracing enables monitoring and troubleshooting of microservices by tracking HTTP requests across multiple service boundaries. This article explains how to integrate distributed tracing IDs into the Axios HTTP client using the standard W3C Tra" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="propagate-w3c-trace-context-in-axios">Propagate W3C Trace
+Context in Axios</h1>
+<p>Distributed tracing enables monitoring and troubleshooting of
+microservices by tracking HTTP requests across multiple service
+boundaries. This article explains how to integrate distributed tracing
+IDs into the Axios HTTP client using the standard W3C Trace Context
+specification (<code>traceparent</code> and <code>tracestate</code>
+headers). You will learn how to manually inject trace headers using
+Axios interceptors as well as how to automate trace propagation using
+OpenTelemetry instrumentation.</p>
+<h2 id="understanding-the-w3c-trace-context-standard">Understanding the
+W3C Trace Context Standard</h2>
+<p>The W3C Trace Context specification defines standard HTTP headers to
+propagate context across system boundaries:</p>
+<ul>
+<li><strong><code>traceparent</code></strong>: A hyphen-separated string
+containing:
+<ul>
+<li><code>version</code>: Usually <code>00</code>.</li>
+<li><code>trace-id</code>: A 16-byte (32-hex-character) unique
+identifier for the distributed trace.</li>
+<li><code>parent-id</code> (span-id): An 8-byte (16-hex-character)
+unique identifier for the current operation/span.</li>
+<li><code>trace-flags</code>: An 8-bit field (2-hex characters) for
+options like sampling (<code>01</code> = recorded).</li>
+<li><em>Example:</em>
+<code>00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</code></li>
+</ul></li>
+<li><strong><code>tracestate</code></strong>: An optional header used
+for vendor-specific metadata key-value pairs.</li>
+</ul>
+<hr />
+<h2 id="method-1-manual-header-injection-with-axios-interceptors">Method
+1: Manual Header Injection with Axios Interceptors</h2>
+<p>If you manage trace IDs manually or use a custom tracing solution,
+use an Axios request interceptor to append the <code>traceparent</code>
+header to every outgoing HTTP call.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> crypto <span class="im">from</span> <span class="st">&#39;crypto&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Helper to generate compliant hex IDs</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> generateTraceId <span class="op">=</span> () <span class="kw">=&gt;</span> crypto<span class="op">.</span><span class="fu">randomBytes</span>(<span class="dv">16</span>)<span class="op">.</span><span class="fu">toString</span>(<span class="st">&#39;hex&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> generateSpanId <span class="op">=</span> () <span class="kw">=&gt;</span> crypto<span class="op">.</span><span class="fu">randomBytes</span>(<span class="dv">8</span>)<span class="op">.</span><span class="fu">toString</span>(<span class="st">&#39;hex&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Create an Axios instance</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> apiClient <span class="op">=</span> axios<span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">baseURL</span><span class="op">:</span> <span class="st">&#39;https://api.example.com&#39;</span><span class="op">,</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Attach a request interceptor to inject trace context</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>apiClient<span class="op">.</span><span class="at">interceptors</span><span class="op">.</span><span class="at">request</span><span class="op">.</span><span class="fu">use</span>((config) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Retrieve existing trace ID from context or generate a new one</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> traceId <span class="op">=</span> config<span class="op">.</span><span class="at">headers</span>[<span class="st">&#39;x-trace-id&#39;</span>] <span class="op">||</span> <span class="fu">generateTraceId</span>()<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> spanId <span class="op">=</span> <span class="fu">generateSpanId</span>()<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> traceFlags <span class="op">=</span> <span class="st">&#39;01&#39;</span><span class="op">;</span> <span class="co">// 01 indicates sampled</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> traceparent <span class="op">=</span> <span class="vs">`00-</span><span class="sc">${</span>traceId<span class="sc">}</span><span class="vs">-</span><span class="sc">${</span>spanId<span class="sc">}</span><span class="vs">-</span><span class="sc">${</span>traceFlags<span class="sc">}</span><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Set the W3C traceparent header</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  config<span class="op">.</span><span class="at">headers</span>[<span class="st">&#39;traceparent&#39;</span>] <span class="op">=</span> traceparent<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> config<span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>}<span class="op">,</span> (error) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="bu">Promise</span><span class="op">.</span><span class="fu">reject</span>(error)<span class="op">;</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="im">default</span> apiClient<span class="op">;</span></span></code></pre></div>
+<hr />
+<h2 id="method-2-automatic-propagation-with-opentelemetry">Method 2:
+Automatic Propagation with OpenTelemetry</h2>
+<p>OpenTelemetry provides native instrumentation that automatically
+extracts the active trace context from the application's runtime context
+and injects the W3C headers into all Axios requests.</p>
+<h3 id="1-install-required-packages">1. Install Required Packages</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install @opentelemetry/api @opentelemetry/sdk-node @opentelemetry/instrumentation-http @opentelemetry/instrumentation-axios</span></code></pre></div>
+<h3 id="2-initialize-the-opentelemetry-tracing-sdk">2. Initialize the
+OpenTelemetry Tracing SDK</h3>
+<p>Initialize OpenTelemetry before loading Axios or your application
+entry point.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// tracing.js</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { NodeSDK } <span class="im">from</span> <span class="st">&#39;@opentelemetry/sdk-node&#39;</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { HttpInstrumentation } <span class="im">from</span> <span class="st">&#39;@opentelemetry/instrumentation-http&#39;</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { AxiosInstrumentation } <span class="im">from</span> <span class="st">&#39;@opentelemetry/instrumentation-axios&#39;</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { W3CTraceContextPropagator } <span class="im">from</span> <span class="st">&#39;@opentelemetry/core&#39;</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sdk <span class="op">=</span> <span class="kw">new</span> <span class="fu">NodeSDK</span>({</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">textMapPropagator</span><span class="op">:</span> <span class="kw">new</span> <span class="fu">W3CTraceContextPropagator</span>()<span class="op">,</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">instrumentations</span><span class="op">:</span> [</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> <span class="fu">HttpInstrumentation</span>()<span class="op">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> <span class="fu">AxiosInstrumentation</span>()<span class="op">,</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  ]<span class="op">,</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>sdk<span class="op">.</span><span class="fu">start</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="3-executing-requests-with-active-context">3. Executing Requests
+with Active Context</h3>
+<p>With instrumentation configured, standard Axios calls will
+automatically include the active <code>traceparent</code> header without
+manual configuration.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> axios <span class="im">from</span> <span class="st">&#39;axios&#39;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { trace } <span class="im">from</span> <span class="st">&#39;@opentelemetry/api&#39;</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> tracer <span class="op">=</span> trace<span class="op">.</span><span class="fu">getTracer</span>(<span class="st">&#39;example-service&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">makeCall</span>() {</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> tracer<span class="op">.</span><span class="fu">startActiveSpan</span>(<span class="st">&#39;fetch-data-span&#39;</span><span class="op">,</span> <span class="kw">async</span> (span) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span> {</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Axios automatically attaches &#39;traceparent&#39; matching this active span</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>      <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> axios<span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;https://api.example.com/items&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>      <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Response:&#39;</span><span class="op">,</span> response<span class="op">.</span><span class="at">data</span>)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">catch</span> (error) {</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>      span<span class="op">.</span><span class="fu">recordException</span>(error)<span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>      <span class="cf">throw</span> error<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">finally</span> {</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>      span<span class="op">.</span><span class="fu">end</span>()<span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<hr />
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li><strong>Validate Downstream Propagation:</strong> Ensure downstream
+services extract the <code>traceparent</code> header to maintain
+continuous trace graphs.</li>
+<li><strong>Maintain Trace Flags:</strong> Forward trace flags (such as
+sampling decisions) accurately to avoid unnecessary overhead in
+high-throughput environments.</li>
+<li><strong>Avoid Overwriting:</strong> Check if a
+<code>traceparent</code> header already exists before generating a new
+one to prevent breaking upstream parent-child relationships.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

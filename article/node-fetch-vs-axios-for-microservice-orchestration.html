@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node Fetch vs Axios for Microservice Orchestration - axios</title>
+    <meta name="description" content="Orchestrating microservices requires reliable, fast, and maintainable communication between services. While Node.js now includes a built-in fetch implementation based on Undici, Axios remains one of the most widely used third-party HTTP clients in the ec">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/node-fetch-vs-axios-for-microservice-orchestration">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Node Fetch vs Axios for Microservice Orchestration - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/node-fetch-vs-axios-for-microservice-orchestration" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Orchestrating microservices requires reliable, fast, and maintainable communication between services. While Node.js now includes a built-in fetch implementation based on Undici, Axios remains one of the most widely used third-party HTTP clients in the ec" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="node-fetch-vs-axios-for-microservice-orchestration">Node Fetch
+vs Axios for Microservice Orchestration</h1>
+<p>Orchestrating microservices requires reliable, fast, and maintainable
+communication between services. While Node.js now includes a built-in
+<code>fetch</code> implementation based on Undici, Axios remains one of
+the most widely used third-party HTTP clients in the ecosystem. This
+article compares Node's native <code>fetch</code> with Axios across key
+architectural dimensions, including error handling, request
+modification, timeouts, performance, and dependency management to help
+you choose the right tool for distributed systems.</p>
+<h3 id="1-dependency-management-and-attack-surface">1. Dependency
+Management and Attack Surface</h3>
+<ul>
+<li><strong>Node Native Fetch:</strong> Built directly into Node.js
+runtime (v18 and later). It requires zero external dependencies,
+resulting in smaller container images, faster deployment times, and
+fewer supply chain security vulnerabilities.</li>
+<li><strong>Axios:</strong> A third-party package managed via npm. While
+lightweight, it adds a dependency that must be monitored for updates,
+deprecations, and security advisories.</li>
+</ul>
+<h3 id="2-error-handling-for-non-2xx-http-status-codes">2. Error
+Handling for Non-2xx HTTP Status Codes</h3>
+<ul>
+<li><strong>Node Native Fetch:</strong> Treats any HTTP
+response—including <code>404 Not Found</code> or
+<code>500 Internal Server Error</code>—as a fulfilled promise. The
+orchestration layer must explicitly verify <code>response.ok</code> or
+inspect <code>response.status</code> to throw custom errors.</li>
+<li><strong>Axios:</strong> Automatically rejects promises when the
+response status code falls outside the <code>2xx</code> range. This
+built-in behavior integrates seamlessly with standard
+<code>try/catch</code> workflows in microservice pipelines.</li>
+</ul>
+<h3 id="3-request-interceptors-and-distributed-tracing">3. Request
+Interceptors and Distributed Tracing</h3>
+<ul>
+<li><strong>Node Native Fetch:</strong> Lacks native interceptor
+mechanisms. Propagating distributed tracing headers (such as W3C Trace
+Context or OpenTelemetry headers), authorization tokens, and correlation
+IDs requires wrapping <code>fetch</code> in custom higher-order
+functions.</li>
+<li><strong>Axios:</strong> Provides first-class request and response
+interceptors. This makes it straightforward to globally inject
+authentication headers, attach correlation IDs, log outbound network
+traffic, and handle centralized retry mechanisms.</li>
+</ul>
+<h3 id="4-payload-serialization-and-response-parsing">4. Payload
+Serialization and Response Parsing</h3>
+<ul>
+<li><strong>Node Native Fetch:</strong> Requires manual handling of
+payloads. Outgoing JSON payloads must be explicitly serialized with
+<code>JSON.stringify()</code>, and incoming responses must be resolved
+with <code>await response.json()</code>.</li>
+<li><strong>Axios:</strong> Automatically serializes JavaScript objects
+sent in the <code>data</code> field to JSON and automatically parses
+incoming JSON responses into the <code>response.data</code> object.</li>
+</ul>
+<h3 id="5-timeout-handling-and-request-cancellation">5. Timeout Handling
+and Request Cancellation</h3>
+<ul>
+<li><strong>Node Native Fetch:</strong> Does not provide a dedicated
+<code>timeout</code> property. Timeouts require instantiating an
+<code>AbortController</code> and linking its <code>signal</code>
+alongside <code>AbortSignal.timeout(ms)</code> or
+<code>setTimeout()</code>.</li>
+<li><strong>Axios:</strong> Features a built-in <code>timeout</code>
+configuration option in milliseconds that cancels requests when upstream
+services fail to respond in time, while also supporting
+<code>AbortController</code>.</li>
+</ul>
+<h3 id="6-performance-and-connection-pooling">6. Performance and
+Connection Pooling</h3>
+<ul>
+<li><strong>Node Native Fetch:</strong> Powered by <code>undici</code>,
+Node's native HTTP/1.1 client, which offers high-performance connection
+pooling and reduced overhead compared to legacy Node HTTP modules.
+Custom dispatchers can be configured to manage connection reuse across
+services.</li>
+<li><strong>Axios:</strong> Relies on the standard Node.js
+<code>http</code> and <code>https</code> modules under the hood.
+Managing connection pooling and keep-alive connections requires manually
+providing custom <code>http.Agent</code> and <code>https.Agent</code>
+instances.</li>
+</ul>
+<h3 id="summary-comparison">Summary Comparison</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">Node Native <code>fetch</code></th>
+<th style="text-align: left;">Axios</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Dependencies</strong></td>
+<td style="text-align: left;">None (Built-in)</td>
+<td style="text-align: left;">External npm package</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Default HTTP Error
+Handling</strong></td>
+<td style="text-align: left;">Resolves on 4xx/5xx
+(<code>response.ok === false</code>)</td>
+<td style="text-align: left;">Rejects on 4xx/5xx</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>JSON Handling</strong></td>
+<td style="text-align: left;">Manual (<code>.json()</code>,
+<code>JSON.stringify</code>)</td>
+<td style="text-align: left;">Automatic serialization and parsing</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Interceptors</strong></td>
+<td style="text-align: left;">Requires custom wrappers</td>
+<td style="text-align: left;">Native support</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Timeout
+Configuration</strong></td>
+<td style="text-align: left;">Requires
+<code>AbortSignal.timeout()</code></td>
+<td style="text-align: left;">Native <code>timeout</code> property</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Underlying Engine</strong></td>
+<td style="text-align: left;">Undici</td>
+<td style="text-align: left;">Node.js
+<code>http</code>/<code>https</code> modules</td>
+</tr>
+</tbody>
+</table>
+<p>For simple orchestrators where minimizing dependencies and maximizing
+raw throughput are the primary goals, Node's native <code>fetch</code>
+is often the optimal choice. For complex microservice meshes requiring
+structured interceptors for tracing, uniform error throwing, and
+automatic retries, Axios provides an out-of-the-box feature set that
+reduces boilerplate code.</p></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

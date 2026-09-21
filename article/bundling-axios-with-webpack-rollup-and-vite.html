@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bundling Axios with Webpack, Rollup, and Vite - axios</title>
+    <meta name="description" content="Bundling the Axios HTTP client into modern web applications requires addressing module resolution, target environments, dependency polyfills, and bundle size optimization. While Axios is versatile and works in both Node.js and browser environments, diffe">
+    <link rel="canonical" href="https://salivity.github.io/axios/article/bundling-axios-with-webpack-rollup-and-vite">
+    <link rel="search" type="application/opensearchdescription+xml" title="axios" href="/axios/opensearch.xml">
+    <link rel="icon" href="/axios/favicon.ico">
+    <link rel="stylesheet" href="/axios/css/style.css">
+    <link media="print" rel="stylesheet" href="/axios/css/print.css">
+    <script src="/axios/js/fuse.min.js"></script>
+    <script src="/axios/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Bundling Axios with Webpack, Rollup, and Vite - axios" />
+    <meta property="og:url" content="https://salivity.github.io/axios/article/bundling-axios-with-webpack-rollup-and-vite" />
+    <meta property="og:image" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/axios/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Bundling the Axios HTTP client into modern web applications requires addressing module resolution, target environments, dependency polyfills, and bundle size optimization. While Axios is versatile and works in both Node.js and browser environments, diffe" />
+    <link rel="manifest" href="/axios/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/axios/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>axios</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/axios/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        
+    <div class="article-layout">
+        <aside id="profile-sidebar" class="profile-column" aria-label="Author Profile"></aside>
+        <div class="article-main-column">
+            <article><h1 id="bundling-axios-with-webpack-rollup-and-vite">Bundling Axios with
+Webpack, Rollup, and Vite</h1>
+<p>Bundling the Axios HTTP client into modern web applications requires
+addressing module resolution, target environments, dependency polyfills,
+and bundle size optimization. While Axios is versatile and works in both
+Node.js and browser environments, differences in how Webpack, Rollup,
+and Vite process packages mean developers must account for specific
+configurations to avoid bloated builds or runtime errors.</p>
+<h2 id="module-format-and-resolution-esm-vs-commonjs">Module Format and
+Resolution (ESM vs. CommonJS)</h2>
+<p>Axios provides both CommonJS and ECMAScript Module (ESM) builds.
+Modern bundlers rely on the <code>exports</code> field in
+<code>package.json</code> to determine the correct entry point:</p>
+<ul>
+<li><strong>ESM Preference:</strong> Ensure your bundler resolves the
+ESM version to allow better static analysis and integration with native
+module pipelines.</li>
+<li><strong>Dual-Package Hazard:</strong> Importing Axios using mixed
+syntax (e.g., mixing <code>require('axios')</code> and
+<code>import axios from 'axios'</code>) in large codebases can lead to
+duplicate instances in the final bundle. Enforce a single import
+strategy.</li>
+</ul>
+<h2 id="platform-target-and-adapter-selection">Platform Target and
+Adapter Selection</h2>
+<p>Axios automatically chooses between two adapters: the Node.js adapter
+(using <code>http</code>/<code>https</code> modules) and the browser
+adapter (using <code>XMLHttpRequest</code> or <code>fetch</code>).
+Bundlers must be instructed which environment is being targeted.</p>
+<ul>
+<li><strong>Browser Targets:</strong> The bundler should resolve the
+browser entry defined in Axios's <code>package.json</code>. If
+misconfigured, the bundler may attempt to include Node.js built-in
+modules (<code>http</code>, <code>https</code>, <code>zlib</code>,
+<code>stream</code>), causing build failures or unnecessary bloat.</li>
+<li><strong>Universal/SSR Applications:</strong> For frameworks
+utilizing Server-Side Rendering (like Next.js, Nuxt, or SvelteKit),
+configure distinct client and server build pipelines so the correct
+adapter is packaged for each context.</li>
+</ul>
+<h2 id="bundler-specific-configurations">Bundler-Specific
+Configurations</h2>
+<h3 id="webpack">Webpack</h3>
+<ul>
+<li><strong>Webpack 5 Polyfills:</strong> Unlike Webpack 4, Webpack 5
+does not automatically polyfill Node.js core modules. If your
+configuration targets the <code>web</code> platform, ensure your
+<code>target: 'web'</code> is explicitly set. If Node-specific imports
+leak into the browser bundle, avoid polyfilling <code>http</code> or
+<code>https</code>; instead, verify that module resolution is picking
+the browser bundle.</li>
+<li><strong>Side Effects:</strong> Axios is generally marked as
+containing side effects due to its default instance creation and
+interceptor setup. Ensure your Webpack optimization settings do not
+improperly prune required interceptors.</li>
+</ul>
+<h3 id="rollup">Rollup</h3>
+<ul>
+<li><strong>Plugin Requirements:</strong> Rollup requires
+<code>@rollup/plugin-node-resolve</code> to locate Axios within
+<code>node_modules</code>. If using older versions of Axios or CommonJS
+dependencies, <code>@rollup/plugin-commonjs</code> is also
+necessary.</li>
+<li><strong>Browser Field:</strong> Enable the
+<code>browser: true</code> flag in
+<code>@rollup/plugin-node-resolve</code> to force Rollup to respect the
+<code>browser</code> field in <code>package.json</code>, ensuring
+browser-safe code is bundled instead of Node.js adapters.</li>
+</ul>
+<h3 id="vite">Vite</h3>
+<ul>
+<li><strong>Dependency Pre-Bundling:</strong> Vite automatically
+pre-bundles dependencies like Axios using <code>esbuild</code> during
+development. This converts CommonJS dependencies to ESM and caches them.
+Axios typically works out of the box with Vite.</li>
+<li><strong>SSR Externalization:</strong> When building for SSR, ensure
+Axios is marked properly in <code>ssr.noExternal</code> or
+<code>ssr.external</code> depending on whether you want Axios bundled
+into the server output or resolved at runtime via Node.js.</li>
+</ul>
+<h2 id="bundle-size-and-tree-shaking-considerations">Bundle Size and
+Tree-Shaking Considerations</h2>
+<p>Axios is architected around a single, highly configurable core
+instance. As a result:</p>
+<ul>
+<li><strong>Limited Tree-Shaking:</strong> Because core functionality
+(interceptors, transforms, defaults) is attached directly to the
+<code>axios</code> object and its prototypes, standard tree-shaking will
+not remove unused HTTP methods (e.g., <code>axios.put</code> or
+<code>axios.delete</code>).</li>
+<li><strong>Custom Instances:</strong> Creating shared custom instances
+via <code>axios.create()</code> is recommended for maintainability, but
+it does not reduce the base footprint of the library.</li>
+<li><strong>Alternative Lightweight Wrappers:</strong> If bundle size is
+the primary constraint and only basic <code>fetch</code> functionality
+is required, evaluate whether Axios's advanced features (automatic JSON
+parsing, request cancellation, interceptors) justify its weight compared
+to native <code>fetch</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+        <script>
+            const utterancesScript = document.createElement('script');
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/axios'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+        </div>
+    </div>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/axios/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/axios/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>
